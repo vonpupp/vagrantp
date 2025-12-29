@@ -27,6 +27,7 @@ ENV/
 env/
 .venv/
 .conda/
+coverage.xml
 
 # UV
 uv.lock
