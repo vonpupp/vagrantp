@@ -3,10 +3,11 @@ name: CI
 on:
   push:
     branches:
-      - master
+      - main
+      - 001-template-driven-infra
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   # Test on all Python versions with minimal dependencies
