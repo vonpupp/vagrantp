@@ -1,23 +1,22 @@
 """VM manager for Vagrant-based infrastructure."""
 
 import subprocess
-import time
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any
+
 from utils.helpers import (
-    run_command,
+    ErrorCode,
+    InfrastructureState,
     ProviderNotAvailableError,
     VagrantpError,
-    InfrastructureState,
-    StateManager,
-    ErrorCode,
+    run_command,
 )
 
 
 class VMManager:
     """Manager for Vagrant-based virtual machines."""
 
-    def __init__(self, infra_id: str, project_dir: Optional[Path] = None):
+    def __init__(self, infra_id: str, project_dir: Path | None = None):
         """Initialize VM manager.
 
         Args:
@@ -27,9 +26,39 @@ class VMManager:
         self.infra_id = infra_id
         self.project_dir = project_dir or Path.cwd()
         self.vagrantfile_path = self.project_dir / "Vagrantfile"
-        self.state_manager = StateManager(self.project_dir / ".vagrantp-state")
 
-    def create(self, config: Dict[str, Any]) -> None:
+    def _get_state(self) -> InfrastructureState:
+        """Get current state of VM by querying Vagrant directly.
+
+        Returns:
+            Current VM state.
+        """
+        try:
+            result = run_command(
+                ["vagrant", "status", "--machine-readable"],
+                cwd=self.project_dir,
+                check=False,
+            )
+            if result.returncode != 0:
+                return InfrastructureState.NOT_CREATED
+
+            for line in result.stdout.strip().split("\n"):
+                if line.startswith(",,"):
+                    parts = line.split(",")
+                    if len(parts) >= 3:
+                        vagrant_state = parts[1].strip().lower()
+                        if vagrant_state == "running":
+                            return InfrastructureState.RUNNING
+                        elif vagrant_state in ["poweroff", "stopped", "aborted"]:
+                            return InfrastructureState.STOPPED
+                        elif vagrant_state in ["not created", "not_created"]:
+                            return InfrastructureState.NOT_CREATED
+        except (subprocess.CalledProcessError, Exception):
+            pass
+
+        return InfrastructureState.NOT_CREATED
+
+    def create(self, config: dict[str, Any]) -> None:
         """Create VM from configuration.
 
         Args:
@@ -51,24 +80,17 @@ class VMManager:
             provider = config.get("PROVIDER", "virtualbox")
             raise ProviderNotAvailableError(provider)
 
-        # Update state to creating
-        self.state_manager.set_state(self.infra_id, InfrastructureState.CREATING)
-
         print("  Creating VM...")
 
         try:
             # Run vagrant up
             run_command(["vagrant", "up"], cwd=self.project_dir, check=False)
 
-            # Update state to running
-            self.state_manager.set_state(self.infra_id, InfrastructureState.RUNNING)
-
             print("✓ VM created and running")
         except subprocess.CalledProcessError as e:
-            self.state_manager.set_state(self.infra_id, InfrastructureState.NOT_CREATED)
             raise VagrantpError(f"Failed to create VM: {e}")
 
-    def connect(self, command: Optional[str] = None) -> None:
+    def connect(self, command: str | None = None) -> None:
         """Establish SSH connection to VM.
 
         Args:
@@ -80,7 +102,7 @@ class VMManager:
         print("  Establishing SSH connection...")
 
         # Check state
-        state = self.state_manager.get_state(self.infra_id)
+        state = self._get_state()
         if state != InfrastructureState.RUNNING:
             raise VagrantpError(
                 f"VM '{self.infra_id}' is not running (state: {state.value})",
@@ -95,9 +117,7 @@ class VMManager:
                     capture_output=False,
                 )
             else:
-                run_command(
-                    ["vagrant", "ssh"], cwd=self.project_dir, capture_output=False
-                )
+                run_command(["vagrant", "ssh"], cwd=self.project_dir, capture_output=False)
 
             print("✓ Connected")
         except subprocess.CalledProcessError as e:
@@ -112,7 +132,7 @@ class VMManager:
         Raises:
             VagrantpError: If stop fails.
         """
-        state = self.state_manager.get_state(self.infra_id)
+        state = self._get_state()
 
         if state == InfrastructureState.NOT_CREATED:
             print(f"ℹ VM '{self.infra_id}' does not exist")
@@ -130,7 +150,6 @@ class VMManager:
             else:
                 run_command(["vagrant", "halt"], cwd=self.project_dir)
 
-            self.state_manager.set_state(self.infra_id, InfrastructureState.STOPPED)
             print("✓ VM stopped")
         except subprocess.CalledProcessError as e:
             raise VagrantpError(f"Failed to stop VM: {e}")
@@ -144,7 +163,7 @@ class VMManager:
         Raises:
             VagrantpError: If removal fails.
         """
-        state = self.state_manager.get_state(self.infra_id)
+        state = self._get_state()
 
         if state == InfrastructureState.NOT_CREATED:
             print(f"ℹ VM '{self.infra_id}' does not exist")
@@ -160,17 +179,14 @@ class VMManager:
 
         print(f"  Removing VM '{self.infra_id}'...")
 
-        self.state_manager.set_state(self.infra_id, InfrastructureState.REMOVING)
-
         try:
             run_command(["vagrant", "destroy", "--force"], cwd=self.project_dir)
 
-            self.state_manager.set_state(self.infra_id, InfrastructureState.NOT_CREATED)
             print("✓ VM removed")
         except subprocess.CalledProcessError as e:
             raise VagrantpError(f"Failed to remove VM: {e}")
 
-    def _generate_vagrantfile(self, config: Dict[str, Any]) -> None:
+    def _generate_vagrantfile(self, config: dict[str, Any]) -> None:
         """Generate Vagrantfile from configuration.
 
         Args:
@@ -217,13 +233,9 @@ end
             self.vagrantfile_path.write_text(vagrantfile_content)
 
         except Exception as e:
-            raise VagrantpError(
-                f"Failed to generate Vagrantfile: {e}", ErrorCode.GENERAL_ERROR
-            )
+            raise VagrantpError(f"Failed to generate Vagrantfile: {e}", ErrorCode.GENERAL_ERROR)
 
-    def _build_network_config(
-        self, network_mode: str, ip_address: str, ports: list
-    ) -> str:
+    def _build_network_config(self, network_mode: str, ip_address: str, ports: list) -> str:
         """Build network configuration section for Vagrantfile.
 
         Args:
@@ -280,9 +292,7 @@ end
 
             try:
                 if host_port.lower() == "auto":
-                    ports.append(
-                        {"host": 0, "container": int(container_port), "auto": True}
-                    )
+                    ports.append({"host": 0, "container": int(container_port), "auto": True})
                 else:
                     ports.append(
                         {

@@ -29,9 +29,35 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-mock>=3.10",
+    "pytest-cov>=4.0",
+]
+dev = [
+    "vagrantp[test]",
+    "ruff>=0.1.0",
+    "pyrefly>=0.3.0",
+    "deadcode>=1.1.0",
+    "mypy>=1.15.0",
+    "pydocstyle>=6.3.0",
+]
+
+[dependency-groups]
+test = [
+    "pytest>=7.0",
+    "pytest-mock>=3.10",
+    "pytest-cov>=4.0",
+]
 dev = [
     "pytest>=7.0",
     "pytest-mock>=3.10",
+    "pytest-cov>=4.0",
+    "ruff>=0.1.0",
+    "pyrefly>=0.3.0",
+    "deadcode>=1.1.0",
+    "mypy>=1.15.0",
+    "pydocstyle>=6.3.0",
 ]
 
 [project.scripts]
@@ -45,3 +71,86 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+addopts = "--cov=src --cov-report=term-missing --cov-report=xml"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "B017",  # allow asserting blind exception in tests
+    "F401",  # allow unused imports (some are needed for API compatibility)
+    "B904",  # allow plain raise without from clause (refactor later)
+    "F841",  # allow unused variables (some needed for clarity)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["vagrantp"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+ignore_missing_imports = true
+exclude = [
+    "^tests/",
+]
+
+[tool.pydocstyle]
+convention = "pep257"
+ignore = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D203",
+    "D213",
+]
+
+[tool.pyrefly]
+python_version = "3.11"
+
+[tool.deadcode]
+ignore = [
+    "tests/",
+]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B404", "B603"]

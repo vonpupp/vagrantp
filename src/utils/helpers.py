@@ -1,11 +1,9 @@
 """Utility functions and helper classes."""
 
-import os
 import subprocess
-import sys
 from enum import Enum
-from typing import Optional, List, Dict, Any
 from pathlib import Path
+from typing import Any
 
 
 class InfrastructureState(Enum):
@@ -16,74 +14,6 @@ class InfrastructureState(Enum):
     RUNNING = "running"
     STOPPED = "stopped"
     REMOVING = "removing"
-
-
-class StateManager:
-    """Manager for tracking infrastructure states."""
-
-    def __init__(self, state_file: Optional[Path] = None):
-        """Initialize state manager.
-
-        Args:
-            state_file: Path to state file. If None, uses current directory.
-        """
-        self.state_file = state_file or Path.cwd() / ".vagrantp-state"
-
-    def get_state(self, infra_id: str) -> InfrastructureState:
-        """Get current state of infrastructure.
-
-        Args:
-            infra_id: Infrastructure identifier.
-
-        Returns:
-            Current infrastructure state.
-        """
-        if not self.state_file.exists():
-            return InfrastructureState.NOT_CREATED
-
-        states = self._load_states()
-        state_str = states.get(infra_id, InfrastructureState.NOT_CREATED.value)
-
-        try:
-            return InfrastructureState(state_str)
-        except ValueError:
-            return InfrastructureState.NOT_CREATED
-
-    def set_state(self, infra_id: str, state: InfrastructureState) -> None:
-        """Set infrastructure state.
-
-        Args:
-            infra_id: Infrastructure identifier.
-            state: New state.
-        """
-        states = self._load_states()
-        states[infra_id] = state.value
-        self._save_states(states)
-
-    def _load_states(self) -> Dict[str, str]:
-        """Load states from file.
-
-        Returns:
-            Dictionary of infrastructure IDs to states.
-        """
-        states = {}
-        if self.state_file.exists():
-            with open(self.state_file, "r") as f:
-                for line in f:
-                    if "=" in line:
-                        infra_id, state = line.strip().split("=", 1)
-                        states[infra_id] = state
-        return states
-
-    def _save_states(self, states: Dict[str, str]) -> None:
-        """Save states to file.
-
-        Args:
-            states: Dictionary of infrastructure IDs to states.
-        """
-        with open(self.state_file, "w") as f:
-            for infra_id, state in states.items():
-                f.write(f"{infra_id}={state}\n")
 
 
 class ErrorCode(Enum):
@@ -106,14 +36,14 @@ class VagrantpError(Exception):
         self,
         message: str,
         code: ErrorCode = ErrorCode.GENERAL_ERROR,
-        suggestion: Optional[str] = None,
+        suggestion: str | None = None,
     ):
         self.message = message
         self.code = code
         self.suggestion = suggestion
         super().__init__(self.message)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert error to dictionary.
 
         Returns:
@@ -128,10 +58,8 @@ class VagrantpError(Exception):
 class ConfigNotFoundError(VagrantpError):
     """Configuration file not found."""
 
-    def __init__(self, env_path: Optional[Path] = None):
-        message = (
-            f"Configuration file {env_path or '.env'} not found in current directory"
-        )
+    def __init__(self, env_path: Path | None = None):
+        message = f"Configuration file {env_path or '.env'} not found in current directory"
         super().__init__(
             message,
             ErrorCode.CONFIG_ERROR,
@@ -142,7 +70,7 @@ class ConfigNotFoundError(VagrantpError):
 class ConfigInvalidError(VagrantpError):
     """Invalid configuration."""
 
-    def __init__(self, details: str, field: Optional[str] = None):
+    def __init__(self, details: str, field: str | None = None):
         message = f"Invalid configuration: {details}"
         super().__init__(
             message,
@@ -190,7 +118,7 @@ class ProviderNotAvailableError(VagrantpError):
 class PortConflictError(VagrantpError):
     """Port conflict."""
 
-    def __init__(self, port: int, existing_project: Optional[str] = None):
+    def __init__(self, port: int, existing_project: str | None = None):
         message = f"Port {port} is already in use"
         if existing_project:
             message += f" by project '{existing_project}'"
@@ -214,8 +142,8 @@ class ProvisioningFailedError(VagrantpError):
 
 
 def run_command(
-    cmd: List[str],
-    cwd: Optional[Path] = None,
+    cmd: list[str],
+    cwd: Path | None = None,
     capture_output: bool = True,
     check: bool = True,
 ) -> subprocess.CompletedProcess:
@@ -234,17 +162,13 @@ def run_command(
         subprocess.CalledProcessError: If command fails and check=True.
     """
     try:
-        return subprocess.run(
-            cmd, cwd=cwd, capture_output=capture_output, text=True, check=check
-        )
+        return subprocess.run(cmd, cwd=cwd, capture_output=capture_output, text=True, check=check)
     except subprocess.CalledProcessError as e:
         if capture_output:
             error_msg = f"Command failed: {' '.join(cmd)}\n"
             if e.stderr:
                 error_msg += f"Error output: {e.stderr}"
-            raise subprocess.CalledProcessError(
-                e.returncode, cmd, e.stdout, error_msg
-            ) from e
+            raise subprocess.CalledProcessError(e.returncode, cmd, e.stdout, error_msg) from e
         raise
 
 
@@ -286,7 +210,7 @@ def write_file(path: Path, content: str) -> None:
 class TemplateRenderer:
     """Base class for ERB template rendering."""
 
-    def __init__(self, template_dir: Optional[Path] = None):
+    def __init__(self, template_dir: Path | None = None):
         """Initialize template renderer.
 
         Args:
@@ -294,7 +218,7 @@ class TemplateRenderer:
         """
         self.template_dir = template_dir or Path("templates")
 
-    def render(self, template_name: str, context: Dict[str, Any]) -> str:
+    def render(self, template_name: str, context: dict[str, Any]) -> str:
         """Render ERB template with context.
 
         Args:

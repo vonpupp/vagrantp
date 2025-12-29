@@ -2,45 +2,37 @@
 
 import sys
 from pathlib import Path
-from invoke.tasks import task
-from invoke.program import Program
-from invoke.collection import Collection
 
-from config.parser import ConfigurationParser, ValidationError
+from invoke.collection import Collection
+from invoke.program import Program
+from invoke.tasks import task
+
+from config.parser import ConfigurationParser
+from podman.container_manager import ContainerManager
 from utils.helpers import (
-    VagrantpError,
-    ConfigNotFoundError,
     ConfigInvalidError,
-    InfrastructureExistsError,
+    ConfigNotFoundError,
     ErrorCode,
+    InfrastructureExistsError,
     InfrastructureState,
-    StateManager,
+    VagrantpError,
 )
 from vagrant.vm_manager import VMManager
-from podman.container_manager import ContainerManager
 
 
 @task
-def show_version(c):
+def version(c):
     """Show version information."""
     print("Vagrantp 1.0.0")
 
 
-@task(name="up")
-def up_task(c, dry_run=False, no_provision=False):
-    """Create and start infrastructure.
-
-    Args:
-        c: Invoke context.
-        dry_run: Validate configuration without creating infrastructure.
-        no_provision: Skip provisioning step.
-    """
+@task
+def up(c, dry_run=False, no_provision=False):
+    """Create and start infrastructure."""
     try:
-        # Load configuration
         parser = ConfigurationParser()
         config = parser.load()
 
-        # Validate configuration
         validation_result = parser.validate()
         if not validation_result.valid:
             print("✗ Configuration validation failed:")
@@ -56,20 +48,23 @@ def up_task(c, dry_run=False, no_provision=False):
             print(f"  PROVIDER: {config.get('PROVIDER')}")
             return
 
-        # Get infrastructure ID
         infra_id = config.get("INFRA_ID", Path.cwd().name)
 
-        # Check if infrastructure already exists
-        state_manager = StateManager()
-        current_state = state_manager.get_state(infra_id)
+        if infra_type == "vm":
+            manager = VMManager(infra_id)
+        elif infra_type == "container":
+            manager = ContainerManager(infra_id)
+        else:
+            print(f"✗ Unknown INFRA_TYPE: {infra_type}")
+            sys.exit(ErrorCode.CONFIG_ERROR.value)
+
+        current_state = manager._get_state()
 
         if current_state != InfrastructureState.NOT_CREATED:
             if current_state == InfrastructureState.RUNNING:
                 raise InfrastructureExistsError(infra_id, current_state.value)
             else:
-                print(
-                    f"ℹ Infrastructure '{infra_id}' exists in state: {current_state.value}"
-                )
+                print(f"ℹ Infrastructure '{infra_id}' exists in state: {current_state.value}")
                 print("  Run 'vagrantp up' to start, or 'vagrantp rm' to recreate")
                 return
 
@@ -82,18 +77,13 @@ def up_task(c, dry_run=False, no_provision=False):
             print(f"  IMAGE: {config.get('IMAGE', 'alpine:latest')}")
         print(f"  ID: {infra_id}")
 
-        # Create infrastructure based on type
         if infra_type == "vm":
             vm_manager = VMManager(infra_id)
             vm_manager.create(config)
         elif infra_type == "container":
             container_manager = ContainerManager(infra_id)
             container_manager.create(config)
-        else:
-            print(f"✗ Unknown INFRA_TYPE: {infra_type}")
-            sys.exit(ErrorCode.CONFIG_ERROR.value)
 
-        # TODO: Implement provisioning
         if not no_provision and config.get("PROVISIONING_PLAYBOOK"):
             print("ℹ Provisioning not yet implemented")
             print("  This will be implemented in Phase 6")
@@ -115,23 +105,16 @@ def up_task(c, dry_run=False, no_provision=False):
         sys.exit(e.code.value)
 
 
-@task(name="ssh")
-def ssh_task(c, command=None):
-    """Connect to infrastructure.
-
-    Args:
-        c: Invoke context.
-        command: Execute single command and exit.
-    """
+@task
+def ssh(c, command=None):
+    """Connect to infrastructure."""
     try:
-        # Load configuration
         parser = ConfigurationParser()
         config = parser.load()
 
         infra_type = config.get("INFRA_TYPE", "vm")
         infra_id = config.get("INFRA_ID", Path.cwd().name)
 
-        # Connect to infrastructure based on type
         if infra_type == "vm":
             vm_manager = VMManager(infra_id)
             vm_manager.connect(command)
@@ -154,23 +137,16 @@ def ssh_task(c, command=None):
         sys.exit(e.code.value)
 
 
-@task(name="stop")
-def stop_task(c, force=False):
-    """Stop infrastructure.
-
-    Args:
-        c: Invoke context.
-        force: Force stop without graceful shutdown.
-    """
+@task
+def stop(c, force=False):
+    """Stop infrastructure."""
     try:
-        # Load configuration
         parser = ConfigurationParser()
         config = parser.load()
 
         infra_type = config.get("INFRA_TYPE", "vm")
         infra_id = config.get("INFRA_ID", Path.cwd().name)
 
-        # Stop infrastructure based on type
         if infra_type == "vm":
             vm_manager = VMManager(infra_id)
             vm_manager.stop(force)
@@ -193,32 +169,23 @@ def stop_task(c, force=False):
         sys.exit(e.code.value)
 
 
-@task(name="rm")
-def rm_task(c, force=False):
-    """Remove infrastructure.
-
-    Args:
-        c: Invoke context.
-        force: Force removal without stopping first.
-    """
+@task
+def rm(c, force=False):
+    """Remove infrastructure."""
     try:
-        # Load configuration
         parser = ConfigurationParser()
         config = parser.load()
 
         infra_type = config.get("INFRA_TYPE", "vm")
         infra_id = config.get("INFRA_ID", Path.cwd().name)
 
-        # Remove infrastructure based on type
         if infra_type == "vm":
             vm_manager = VMManager(infra_id)
 
             if not force:
-                state = vm_manager.state_manager.get_state(infra_id)
+                state = vm_manager._get_state()
                 if state != InfrastructureState.NOT_CREATED:
-                    print(
-                        f"⚠ Warning: This will permanently remove infrastructure '{infra_id}'"
-                    )
+                    print(f"⚠ Warning: This will permanently remove infrastructure '{infra_id}'")
                     response = input("→ Type 'yes' to confirm: ")
                     if response.lower() != "yes":
                         print("✗ Removal cancelled")
@@ -229,11 +196,9 @@ def rm_task(c, force=False):
             container_manager = ContainerManager(infra_id)
 
             if not force:
-                state = container_manager.state_manager.get_state(infra_id)
+                state = container_manager._get_state()
                 if state != InfrastructureState.NOT_CREATED:
-                    print(
-                        f"⚠ Warning: This will permanently remove infrastructure '{infra_id}'"
-                    )
+                    print(f"⚠ Warning: This will permanently remove infrastructure '{infra_id}'")
                     response = input("→ Type 'yes' to confirm: ")
                     if response.lower() != "yes":
                         print("✗ Removal cancelled")
@@ -256,12 +221,8 @@ def rm_task(c, force=False):
         sys.exit(e.code.value)
 
 
-# Create collection of tasks
-ns = Collection()
-ns.configure({"tasks": [show_version, up_task, ssh_task, stop_task, rm_task]})
-
-# Create program instance
-program = Program(namespace=ns, version="1.0.0")
+# Create program directly with namespace
+program = Program(namespace=Collection.from_module(sys.modules[__name__]), version="1.0.0")
 
 
 if __name__ == "__main__":

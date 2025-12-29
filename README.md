@@ -29,6 +29,47 @@ pip install -e .
 - Podman 3.0+ (for containers)
 - Ansible 2.9+ (for provisioning, optional)
 
+## Development
+
+### Setting up the development environment
+
+```bash
+# Install uv (fast Python package installer)
+pip install uv
+
+# Install development dependencies
+uv sync --group test --group dev
+
+# Run tests
+uv run pytest tests/
+
+# Run linting
+uv run ruff check .
+uv run ruff format .
+uv run pyrefly check src/
+uv run deadcode src/
+
+# Run tests with coverage
+uv run pytest --cov=src tests/
+```
+
+### CI/CD
+
+This project uses GitHub Actions for continuous integration:
+
+- **Testing**: Runs on Python 3.9, 3.10, 3.11, 3.12, 3.13, and 3.14
+- **Linting**: Uses Ruff for code style and formatting, Pyrefly for type checking
+- **Coverage**: Generates code coverage reports with pytest-cov
+
+See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for details.
+
+### Code Quality Tools
+
+- **Ruff**: Fast Python linter and formatter
+- **Pyrefly**: Type checker (alternative to mypy)
+- **Deadcode**: Dead code detector
+- **pytest**: Testing framework with coverage support
+
 ## Quick Start
 
 ### VM Example
@@ -231,6 +272,7 @@ PORTS=8080:80,8081:443,auto:8082
 ## Documentation
 
 For detailed documentation, examples, and troubleshooting, see:
+
 - `specs/001-template-driven-infra/quickstart.md` - Detailed quick start guide
 - `specs/001-template-driven-infra/contracts/cli-api.md` - CLI API specification
 - `specs/001-template-driven-infra/data-model.md` - Data model and entities
@@ -238,4 +280,3 @@ For detailed documentation, examples, and troubleshooting, see:
 ## License
 
 MIT
-

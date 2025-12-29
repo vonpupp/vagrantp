@@ -1,10 +1,10 @@
 """Integration tests for VM lifecycle."""
 
 import pytest
-from pathlib import Path
-from vagrant.vm_manager import VMManager
-from utils.helpers import InfrastructureState, StateManager
+
 from config.parser import ConfigurationParser
+from utils.helpers import InfrastructureState
+from vagrant.vm_manager import VMManager
 
 
 @pytest.fixture
@@ -30,48 +30,10 @@ def vm_manager(temp_project_dir):
     manager = VMManager("test_project", temp_project_dir)
     yield manager
 
-    # Cleanup
-    state_file = temp_project_dir / ".vagrantp-state"
-    if state_file.exists():
-        state_file.unlink()
 
-
-def test_vm_state_tracking(vm_manager):
-    """Test that VM state is tracked correctly."""
-    state = vm_manager.state_manager.get_state("test_project")
-    assert state == InfrastructureState.NOT_CREATED
-
-    vm_manager.state_manager.set_state("test_project", InfrastructureState.CREATING)
-    state = vm_manager.state_manager.get_state("test_project")
-    assert state == InfrastructureState.CREATING
-
-
-def test_vm_state_transitions(vm_manager):
-    """Test VM state transitions follow expected flow."""
-    # not_created -> creating
-    vm_manager.state_manager.set_state("test_project", InfrastructureState.NOT_CREATED)
-    vm_manager.state_manager.set_state("test_project", InfrastructureState.CREATING)
-    state = vm_manager.state_manager.get_state("test_project")
-    assert state == InfrastructureState.CREATING
-
-    # creating -> running
-    vm_manager.state_manager.set_state("test_project", InfrastructureState.RUNNING)
-    state = vm_manager.state_manager.get_state("test_project")
-    assert state == InfrastructureState.RUNNING
-
-    # running -> stopped
-    vm_manager.state_manager.set_state("test_project", InfrastructureState.STOPPED)
-    state = vm_manager.state_manager.get_state("test_project")
-    assert state == InfrastructureState.STOPPED
-
-    # stopped -> removing
-    vm_manager.state_manager.set_state("test_project", InfrastructureState.REMOVING)
-    state = vm_manager.state_manager.get_state("test_project")
-    assert state == InfrastructureState.REMOVING
-
-    # removing -> not_created
-    vm_manager.state_manager.set_state("test_project", InfrastructureState.NOT_CREATED)
-    state = vm_manager.state_manager.get_state("test_project")
+def test_vm_get_state_returns_not_created(vm_manager, temp_project_dir):
+    """Test that VM state returns NOT_CREATED when VM doesn't exist."""
+    state = vm_manager._get_state()
     assert state == InfrastructureState.NOT_CREATED
 
 
@@ -131,14 +93,14 @@ def test_full_lifecycle_workflow(temp_project_dir, vm_manager):
     }
 
     # Initial state: not_created
-    state = vm_manager.state_manager.get_state("test_project")
+    state = vm_manager._get_state()
     assert state == InfrastructureState.NOT_CREATED
 
     # Create VM
     # vm_manager.create(config)  # Requires actual Vagrant
 
     # Verify state transition to running
-    # state = vm_manager.state_manager.get_state("test_project")
+    # state = vm_manager._get_state()
     # assert state == InfrastructureState.RUNNING
 
     # Connect (optional)
@@ -148,12 +110,12 @@ def test_full_lifecycle_workflow(temp_project_dir, vm_manager):
     # vm_manager.stop()
 
     # Verify state transition to stopped
-    # state = vm_manager.state_manager.get_state("test_project")
+    # state = vm_manager._get_state()
     # assert state == InfrastructureState.STOPPED
 
     # Remove VM
     # vm_manager.remove()
 
     # Verify state transition back to not_created
-    # state = vm_manager.state_manager.get_state("test_project")
+    # state = vm_manager._get_state()
     # assert state == InfrastructureState.NOT_CREATED

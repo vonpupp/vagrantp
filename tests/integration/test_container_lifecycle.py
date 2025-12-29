@@ -1,10 +1,10 @@
 """Integration tests for container lifecycle."""
 
 import pytest
-from pathlib import Path
-from podman.container_manager import ContainerManager
-from utils.helpers import InfrastructureState, StateManager
+
 from config.parser import ConfigurationParser
+from podman.container_manager import ContainerManager
+from utils.helpers import InfrastructureState
 
 
 @pytest.fixture
@@ -29,62 +29,10 @@ def container_manager(temp_container_project_dir):
     manager = ContainerManager("test_container", temp_container_project_dir)
     yield manager
 
-    # Cleanup
-    state_file = temp_container_project_dir / ".vagrantp-state"
-    if state_file.exists():
-        state_file.unlink()
 
-
-def test_container_state_tracking(container_manager):
-    """Test that container state is tracked correctly."""
-    state = container_manager.state_manager.get_state("test_container")
-    assert state == InfrastructureState.NOT_CREATED
-
-    container_manager.state_manager.set_state(
-        "test_container", InfrastructureState.CREATING
-    )
-    state = container_manager.state_manager.get_state("test_container")
-    assert state == InfrastructureState.CREATING
-
-
-def test_container_state_transitions(container_manager):
-    """Test container state transitions follow expected flow."""
-    # not_created -> creating
-    container_manager.state_manager.set_state(
-        "test_container", InfrastructureState.NOT_CREATED
-    )
-    container_manager.state_manager.set_state(
-        "test_container", InfrastructureState.CREATING
-    )
-    state = container_manager.state_manager.get_state("test_container")
-    assert state == InfrastructureState.CREATING
-
-    # creating -> running
-    container_manager.state_manager.set_state(
-        "test_container", InfrastructureState.RUNNING
-    )
-    state = container_manager.state_manager.get_state("test_container")
-    assert state == InfrastructureState.RUNNING
-
-    # running -> stopped
-    container_manager.state_manager.set_state(
-        "test_container", InfrastructureState.STOPPED
-    )
-    state = container_manager.state_manager.get_state("test_container")
-    assert state == InfrastructureState.STOPPED
-
-    # stopped -> removing
-    container_manager.state_manager.set_state(
-        "test_container", InfrastructureState.REMOVING
-    )
-    state = container_manager.state_manager.get_state("test_container")
-    assert state == InfrastructureState.REMOVING
-
-    # removing -> not_created
-    container_manager.state_manager.set_state(
-        "test_container", InfrastructureState.NOT_CREATED
-    )
-    state = container_manager.state_manager.get_state("test_container")
+def test_container_get_state_returns_not_created(container_manager):
+    """Test that container state returns NOT_CREATED when container doesn't exist."""
+    state = container_manager._get_state()
     assert state == InfrastructureState.NOT_CREATED
 
 
@@ -176,14 +124,14 @@ def test_full_lifecycle_workflow(temp_container_project_dir, container_manager):
     }
 
     # Initial state: not_created
-    state = container_manager.state_manager.get_state("test_container")
+    state = container_manager._get_state()
     assert state == InfrastructureState.NOT_CREATED
 
     # Create container
     # container_manager.create(config)  # Requires actual Podman
 
     # Verify state transition to running
-    # state = container_manager.state_manager.get_state("test_container")
+    # state = container_manager._get_state()
     # assert state == InfrastructureState.RUNNING
 
     # Connect (optional)
@@ -193,12 +141,12 @@ def test_full_lifecycle_workflow(temp_container_project_dir, container_manager):
     # container_manager.stop()
 
     # Verify state transition to stopped
-    # state = container_manager.state_manager.get_state("test_container")
+    # state = container_manager._get_state()
     # assert state == InfrastructureState.STOPPED
 
     # Remove container
     # container_manager.remove()
 
     # Verify state transition back to not_created
-    # state = container_manager.state_manager.get_state("test_container")
+    # state = container_manager._get_state()
     # assert state == InfrastructureState.NOT_CREATED

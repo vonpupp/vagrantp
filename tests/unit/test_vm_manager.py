@@ -1,15 +1,14 @@
 """Unit tests for VM manager."""
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, call
-from pathlib import Path
-from vagrant.vm_manager import VMManager
+
 from utils.helpers import (
     InfrastructureState,
     VagrantpError,
-    ProviderNotAvailableError,
-    ErrorCode,
 )
+from vagrant.vm_manager import VMManager
 
 
 @pytest.fixture
@@ -36,7 +35,6 @@ class TestVMManager:
         assert manager.infra_id == "test_vm"
         assert manager.project_dir == temp_project_dir
         assert manager.vagrantfile_path == temp_project_dir / "Vagrantfile"
-        assert manager.state_manager is not None
 
     def test_initialization_default_project_dir(self, tmp_path):
         """Test VM manager initialization with default project directory."""
@@ -62,10 +60,7 @@ class TestVMManager:
         mock_run_command.assert_called_with(["vagrant", "--version"])
 
     @patch("vagrant.vm_manager.run_command")
-    @patch("vagrant.vm_manager.run_command")
-    def test_create_generates_vagrantfile(
-        self, mock_run_command, vm_manager, temp_project_dir
-    ):
+    def test_create_generates_vagrantfile(self, mock_run_command, vm_manager, temp_project_dir):
         """Test that create generates Vagrantfile."""
         mock_run_command.return_value = Mock()
 
@@ -86,8 +81,8 @@ class TestVMManager:
         assert "vb.cpus = 2" in content
 
     @patch("vagrant.vm_manager.run_command")
-    def test_create_sets_state(self, mock_run_command, vm_manager):
-        """Test that create sets infrastructure state correctly."""
+    def test_create_success(self, mock_run_command, vm_manager):
+        """Test that create executes successfully."""
         mock_run_command.return_value = Mock()
 
         config = {
@@ -97,18 +92,18 @@ class TestVMManager:
             "DISK_SIZE": "10G",
         }
 
-        initial_state = vm_manager.state_manager.get_state("test_vm")
-        assert initial_state == InfrastructureState.NOT_CREATED
-
         vm_manager.create(config)
 
-        final_state = vm_manager.state_manager.get_state("test_vm")
-        assert final_state == InfrastructureState.RUNNING
+        mock_run_command.assert_called()
+        call_args = mock_run_command.call_args[0][0]
+        assert call_args[0] == "vagrant"
+        assert call_args[1] == "up"
 
     @patch("vagrant.vm_manager.run_command")
-    def test_connect_checks_state(self, mock_run_command, vm_manager):
+    @patch.object(VMManager, "_get_state")
+    def test_connect_checks_state(self, mock_get_state, mock_run_command, vm_manager):
         """Test that connect checks infrastructure state."""
-        vm_manager.state_manager.set_state("test_vm", InfrastructureState.STOPPED)
+        mock_get_state.return_value = InfrastructureState.STOPPED
 
         with pytest.raises(VagrantpError) as exc_info:
             vm_manager.connect()
@@ -116,9 +111,10 @@ class TestVMManager:
         assert "not running" in str(exc_info.value)
 
     @patch("vagrant.vm_manager.run_command")
-    def test_connect_executes_ssh(self, mock_run_command, vm_manager):
+    @patch.object(VMManager, "_get_state")
+    def test_connect_executes_ssh(self, mock_get_state, mock_run_command, vm_manager):
         """Test that connect executes SSH command."""
-        vm_manager.state_manager.set_state("test_vm", InfrastructureState.RUNNING)
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         vm_manager.connect("echo test")
 
@@ -130,9 +126,10 @@ class TestVMManager:
         assert call_args[3] == "echo test"
 
     @patch("vagrant.vm_manager.run_command")
-    def test_connect_interactive(self, mock_run_command, vm_manager):
+    @patch.object(VMManager, "_get_state")
+    def test_connect_interactive(self, mock_get_state, mock_run_command, vm_manager):
         """Test that connect in interactive mode without command."""
-        vm_manager.state_manager.set_state("test_vm", InfrastructureState.RUNNING)
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         vm_manager.connect()
 
@@ -142,18 +139,20 @@ class TestVMManager:
         assert len(call_args) == 2
 
     @patch("vagrant.vm_manager.run_command")
-    def test_stop_checks_state(self, mock_run_command, vm_manager):
+    @patch.object(VMManager, "_get_state")
+    def test_stop_checks_state(self, mock_get_state, mock_run_command, vm_manager):
         """Test that stop checks infrastructure state."""
-        vm_manager.state_manager.set_state("test_vm", InfrastructureState.NOT_CREATED)
+        mock_get_state.return_value = InfrastructureState.NOT_CREATED
 
         vm_manager.stop()
 
         mock_run_command.assert_not_called()
 
     @patch("vagrant.vm_manager.run_command")
-    def test_stop_graceful(self, mock_run_command, vm_manager):
+    @patch.object(VMManager, "_get_state")
+    def test_stop_graceful(self, mock_get_state, mock_run_command, vm_manager):
         """Test graceful stop."""
-        vm_manager.state_manager.set_state("test_vm", InfrastructureState.RUNNING)
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         vm_manager.stop(force=False)
 
@@ -164,9 +163,10 @@ class TestVMManager:
         assert "--force" not in call_args
 
     @patch("vagrant.vm_manager.run_command")
-    def test_stop_force(self, mock_run_command, vm_manager):
+    @patch.object(VMManager, "_get_state")
+    def test_stop_force(self, mock_get_state, mock_run_command, vm_manager):
         """Test force stop."""
-        vm_manager.state_manager.set_state("test_vm", InfrastructureState.RUNNING)
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         vm_manager.stop(force=True)
 
@@ -177,18 +177,20 @@ class TestVMManager:
         assert "--force" in call_args
 
     @patch("vagrant.vm_manager.run_command")
-    def test_remove_checks_state(self, mock_run_command, vm_manager):
+    @patch.object(VMManager, "_get_state")
+    def test_remove_checks_state(self, mock_get_state, mock_run_command, vm_manager):
         """Test that remove checks infrastructure state."""
-        vm_manager.state_manager.set_state("test_vm", InfrastructureState.NOT_CREATED)
+        mock_get_state.return_value = InfrastructureState.NOT_CREATED
 
         vm_manager.remove()
 
         mock_run_command.assert_not_called()
 
     @patch("vagrant.vm_manager.run_command")
-    def test_remove_force(self, mock_run_command, vm_manager):
+    @patch.object(VMManager, "_get_state")
+    def test_remove_force(self, mock_get_state, mock_run_command, vm_manager):
         """Test force removal."""
-        vm_manager.state_manager.set_state("test_vm", InfrastructureState.RUNNING)
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         vm_manager.remove(force=True)
 
@@ -202,11 +204,13 @@ class TestVMManager:
         assert "--force" in destroy_call[0][0]
 
     @patch("vagrant.vm_manager.run_command")
-    def test_remove_sets_state(self, mock_run_command, vm_manager):
+    @patch.object(VMManager, "_get_state")
+    def test_remove_success(self, mock_get_state, mock_run_command, vm_manager):
         """Test that remove sets infrastructure state correctly."""
-        vm_manager.state_manager.set_state("test_vm", InfrastructureState.RUNNING)
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         vm_manager.remove(force=True)
 
-        final_state = vm_manager.state_manager.get_state("test_vm")
-        assert final_state == InfrastructureState.NOT_CREATED
+        mock_run_command.assert_called()
+        calls = mock_run_command.call_args_list
+        assert len(calls) == 2

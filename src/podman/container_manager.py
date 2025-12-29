@@ -2,21 +2,21 @@
 
 import subprocess
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any
+
 from utils.helpers import (
-    run_command,
+    ErrorCode,
+    InfrastructureState,
     ProviderNotAvailableError,
     VagrantpError,
-    InfrastructureState,
-    StateManager,
-    ErrorCode,
+    run_command,
 )
 
 
 class ContainerManager:
     """Manager for Podman-based containers."""
 
-    def __init__(self, infra_id: str, project_dir: Optional[Path] = None):
+    def __init__(self, infra_id: str, project_dir: Path | None = None):
         """Initialize container manager.
 
         Args:
@@ -25,9 +25,46 @@ class ContainerManager:
         """
         self.infra_id = infra_id
         self.project_dir = project_dir or Path.cwd()
-        self.state_manager = StateManager(self.project_dir / ".vagrantp-state")
 
-    def create(self, config: Dict[str, Any]) -> None:
+    def _get_state(self) -> InfrastructureState:
+        """Get current state of container by querying Podman directly.
+
+        Returns:
+            Current container state.
+        """
+        try:
+            result = run_command(
+                [
+                    "podman",
+                    "ps",
+                    "-a",
+                    "--filter",
+                    f"name={self.infra_id}",
+                    "--format",
+                    "{{.Status}}",
+                ],
+                cwd=self.project_dir,
+                check=False,
+            )
+
+            if result.returncode != 0:
+                return InfrastructureState.NOT_CREATED
+
+            status = result.stdout.strip().lower()
+
+            if not status:
+                return InfrastructureState.NOT_CREATED
+
+            if "running" in status:
+                return InfrastructureState.RUNNING
+            elif any(s in status for s in ["stopped", "exited", "created"]):
+                return InfrastructureState.STOPPED
+        except (subprocess.CalledProcessError, Exception):
+            pass
+
+        return InfrastructureState.NOT_CREATED
+
+    def create(self, config: dict[str, Any]) -> None:
         """Create container from configuration.
 
         Args:
@@ -50,9 +87,6 @@ class ContainerManager:
                 f"Container '{self.infra_id}' already exists", ErrorCode.INFRA_EXISTS
             )
 
-        # Update state to creating
-        self.state_manager.set_state(self.infra_id, InfrastructureState.CREATING)
-
         print("  Creating container...")
 
         try:
@@ -62,15 +96,11 @@ class ContainerManager:
             # Run container in detached mode
             run_command(cmd, cwd=self.project_dir, capture_output=False)
 
-            # Update state to running
-            self.state_manager.set_state(self.infra_id, InfrastructureState.RUNNING)
-
             print("✓ Container created and running")
         except subprocess.CalledProcessError as e:
-            self.state_manager.set_state(self.infra_id, InfrastructureState.NOT_CREATED)
             raise VagrantpError(f"Failed to create container: {e}")
 
-    def connect(self, command: Optional[str] = None) -> None:
+    def connect(self, command: str | None = None) -> None:
         """Establish SSH connection to container.
 
         Args:
@@ -82,7 +112,7 @@ class ContainerManager:
         print("  Establishing SSH connection...")
 
         # Check state
-        state = self.state_manager.get_state(self.infra_id)
+        state = self._get_state()
         if state != InfrastructureState.RUNNING:
             raise VagrantpError(
                 f"Container '{self.infra_id}' is not running (state: {state.value})",
@@ -117,16 +147,14 @@ class ContainerManager:
         Raises:
             VagrantpError: If stop fails.
         """
-        state = self.state_manager.get_state(self.infra_id)
+        state = self._get_state()
 
         if state == InfrastructureState.NOT_CREATED:
             print(f"ℹ Container '{self.infra_id}' does not exist")
             return
 
         if state != InfrastructureState.RUNNING:
-            print(
-                f"ℹ Container '{self.infra_id}' is not running (state: {state.value})"
-            )
+            print(f"ℹ Container '{self.infra_id}' is not running (state: {state.value})")
             return
 
         print(f"  Stopping container '{self.infra_id}'...")
@@ -137,7 +165,6 @@ class ContainerManager:
             else:
                 run_command(["podman", "stop", self.infra_id], cwd=self.project_dir)
 
-            self.state_manager.set_state(self.infra_id, InfrastructureState.STOPPED)
             print("✓ Container stopped")
         except subprocess.CalledProcessError as e:
             raise VagrantpError(f"Failed to stop container: {e}")
@@ -151,7 +178,7 @@ class ContainerManager:
         Raises:
             VagrantpError: If removal fails.
         """
-        state = self.state_manager.get_state(self.infra_id)
+        state = self._get_state()
 
         if state == InfrastructureState.NOT_CREATED:
             print(f"ℹ Container '{self.infra_id}' does not exist")
@@ -167,8 +194,6 @@ class ContainerManager:
 
         print(f"  Removing container '{self.infra_id}'...")
 
-        self.state_manager.set_state(self.infra_id, InfrastructureState.REMOVING)
-
         try:
             # Remove container
             run_command(["podman", "rm", self.infra_id], cwd=self.project_dir)
@@ -176,7 +201,6 @@ class ContainerManager:
             # Remove associated volumes (optional)
             # run_command(['podman', 'volume', 'rm', f'{self.infra_id}-data'], check=False)
 
-            self.state_manager.set_state(self.infra_id, InfrastructureState.NOT_CREATED)
             print("✓ Container removed")
         except subprocess.CalledProcessError as e:
             raise VagrantpError(f"Failed to remove container: {e}")
@@ -205,7 +229,7 @@ class ContainerManager:
         except subprocess.CalledProcessError:
             return False
 
-    def _build_run_command(self, config: Dict[str, Any]) -> list:
+    def _build_run_command(self, config: dict[str, Any]) -> list:
         """Build podman run command from configuration.
 
         Args:
@@ -242,9 +266,7 @@ class ContainerManager:
                 if port_mapping["auto"]:
                     cmd.extend(["-p", f"{port_mapping['container']}"])
                 else:
-                    cmd.extend(
-                        ["-p", f"{port_mapping['host']}:{port_mapping['container']}"]
-                    )
+                    cmd.extend(["-p", f"{port_mapping['host']}:{port_mapping['container']}"])
 
         # Add image (default to alpine)
         image = config.get("IMAGE", "alpine:latest")
@@ -279,9 +301,7 @@ class ContainerManager:
 
             try:
                 if host_port.lower() == "auto":
-                    ports.append(
-                        {"host": 0, "container": int(container_port), "auto": True}
-                    )
+                    ports.append({"host": 0, "container": int(container_port), "auto": True})
                 else:
                     ports.append(
                         {

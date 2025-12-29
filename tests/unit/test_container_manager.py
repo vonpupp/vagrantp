@@ -1,14 +1,13 @@
 """Unit tests for container manager."""
 
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, call
-from pathlib import Path
+
 from podman.container_manager import ContainerManager
 from utils.helpers import (
     InfrastructureState,
     VagrantpError,
-    ProviderNotAvailableError,
-    ErrorCode,
 )
 
 
@@ -35,7 +34,6 @@ class TestContainerManager:
 
         assert manager.infra_id == "test_container"
         assert manager.project_dir == temp_project_dir
-        assert manager.state_manager is not None
 
     def test_initialization_default_project_dir(self, tmp_path):
         """Test container manager initialization with default project directory."""
@@ -44,9 +42,7 @@ class TestContainerManager:
             assert manager.project_dir == tmp_path
 
     @patch("podman.container_manager.run_command")
-    def test_create_checks_podman_availability(
-        self, mock_run_command, container_manager
-    ):
+    def test_create_checks_podman_availability(self, mock_run_command, container_manager):
         """Test that create checks for Podman availability."""
         mock_run_command.side_effect = Exception("Podman not found")
 
@@ -58,26 +54,25 @@ class TestContainerManager:
         mock_run_command.assert_called_with(["podman", "--version"])
 
     @patch("podman.container_manager.run_command")
-    def test_create_sets_state(self, mock_run_command, container_manager):
-        """Test that create sets infrastructure state correctly."""
-        mock_run_command.return_value = Mock()
+    def test_create_success(self, mock_run_command, container_manager):
+        """Test that create executes successfully."""
+        mock_result = Mock()
+        mock_result.stdout = ""
+        mock_run_command.return_value = mock_result
 
         config = {"MEMORY": "512", "CPUS": "1", "IMAGE": "alpine:latest"}
 
-        initial_state = container_manager.state_manager.get_state("test_container")
-        assert initial_state == InfrastructureState.NOT_CREATED
-
         container_manager.create(config)
 
-        final_state = container_manager.state_manager.get_state("test_container")
-        assert final_state == InfrastructureState.RUNNING
+        mock_run_command.assert_called()
+        call_args = mock_run_command.call_args[0][0]
+        assert call_args[0] == "podman"
 
     @patch("podman.container_manager.run_command")
-    def test_connect_checks_state(self, mock_run_command, container_manager):
+    @patch.object(ContainerManager, "_get_state")
+    def test_connect_checks_state(self, mock_get_state, mock_run_command, container_manager):
         """Test that connect checks infrastructure state."""
-        container_manager.state_manager.set_state(
-            "test_container", InfrastructureState.STOPPED
-        )
+        mock_get_state.return_value = InfrastructureState.STOPPED
 
         with pytest.raises(VagrantpError) as exc_info:
             container_manager.connect()
@@ -85,11 +80,10 @@ class TestContainerManager:
         assert "not running" in str(exc_info.value)
 
     @patch("podman.container_manager.run_command")
-    def test_connect_executes_ssh(self, mock_run_command, container_manager):
+    @patch.object(ContainerManager, "_get_state")
+    def test_connect_executes_ssh(self, mock_get_state, mock_run_command, container_manager):
         """Test that connect executes podman exec command."""
-        container_manager.state_manager.set_state(
-            "test_container", InfrastructureState.RUNNING
-        )
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         container_manager.connect("echo test")
 
@@ -102,11 +96,10 @@ class TestContainerManager:
         assert "/bin/sh" in call_args
 
     @patch("podman.container_manager.run_command")
-    def test_connect_interactive(self, mock_run_command, container_manager):
+    @patch.object(ContainerManager, "_get_state")
+    def test_connect_interactive(self, mock_get_state, mock_run_command, container_manager):
         """Test that connect in interactive mode without command."""
-        container_manager.state_manager.set_state(
-            "test_container", InfrastructureState.RUNNING
-        )
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         container_manager.connect()
 
@@ -116,22 +109,20 @@ class TestContainerManager:
         assert "-it" in call_args
 
     @patch("podman.container_manager.run_command")
-    def test_stop_checks_state(self, mock_run_command, container_manager):
+    @patch.object(ContainerManager, "_get_state")
+    def test_stop_checks_state(self, mock_get_state, mock_run_command, container_manager):
         """Test that stop checks infrastructure state."""
-        container_manager.state_manager.set_state(
-            "test_container", InfrastructureState.NOT_CREATED
-        )
+        mock_get_state.return_value = InfrastructureState.NOT_CREATED
 
         container_manager.stop()
 
         mock_run_command.assert_not_called()
 
     @patch("podman.container_manager.run_command")
-    def test_stop_graceful(self, mock_run_command, container_manager):
+    @patch.object(ContainerManager, "_get_state")
+    def test_stop_graceful(self, mock_get_state, mock_run_command, container_manager):
         """Test graceful stop."""
-        container_manager.state_manager.set_state(
-            "test_container", InfrastructureState.RUNNING
-        )
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         container_manager.stop(force=False)
 
@@ -142,11 +133,10 @@ class TestContainerManager:
         assert "--force" not in call_args
 
     @patch("podman.container_manager.run_command")
-    def test_stop_force(self, mock_run_command, container_manager):
+    @patch.object(ContainerManager, "_get_state")
+    def test_stop_force(self, mock_get_state, mock_run_command, container_manager):
         """Test force stop."""
-        container_manager.state_manager.set_state(
-            "test_container", InfrastructureState.RUNNING
-        )
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         container_manager.stop(force=True)
 
@@ -157,22 +147,20 @@ class TestContainerManager:
         assert "--force" not in call_args
 
     @patch("podman.container_manager.run_command")
-    def test_remove_checks_state(self, mock_run_command, container_manager):
+    @patch.object(ContainerManager, "_get_state")
+    def test_remove_checks_state(self, mock_get_state, mock_run_command, container_manager):
         """Test that remove checks infrastructure state."""
-        container_manager.state_manager.set_state(
-            "test_container", InfrastructureState.NOT_CREATED
-        )
+        mock_get_state.return_value = InfrastructureState.NOT_CREATED
 
         container_manager.remove()
 
         mock_run_command.assert_not_called()
 
     @patch("podman.container_manager.run_command")
-    def test_remove_force(self, mock_run_command, container_manager):
+    @patch.object(ContainerManager, "_get_state")
+    def test_remove_force(self, mock_get_state, mock_run_command, container_manager):
         """Test force removal."""
-        container_manager.state_manager.set_state(
-            "test_container", InfrastructureState.RUNNING
-        )
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         container_manager.remove(force=True)
 
@@ -186,16 +174,16 @@ class TestContainerManager:
         assert len(rm_call) > 0
 
     @patch("podman.container_manager.run_command")
-    def test_remove_sets_state(self, mock_run_command, container_manager):
+    @patch.object(ContainerManager, "_get_state")
+    def test_remove_success(self, mock_get_state, mock_run_command, container_manager):
         """Test that remove sets infrastructure state correctly."""
-        container_manager.state_manager.set_state(
-            "test_container", InfrastructureState.RUNNING
-        )
+        mock_get_state.return_value = InfrastructureState.RUNNING
 
         container_manager.remove(force=True)
 
-        final_state = container_manager.state_manager.get_state("test_container")
-        assert final_state == InfrastructureState.NOT_CREATED
+        mock_run_command.assert_called()
+        calls = mock_run_command.call_args_list
+        assert len(calls) == 2
 
     def test_build_run_command_basic(self, container_manager):
         """Test building basic podman run command."""

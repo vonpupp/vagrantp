@@ -26,6 +26,10 @@ venv/
 ENV/
 env/
 .venv/
+.conda/
+
+# UV
+uv.lock
 
 # Testing
 .pytest_cache/

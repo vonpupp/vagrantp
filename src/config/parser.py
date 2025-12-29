@@ -1,17 +1,15 @@
 """Configuration file parser for .env files."""
 
+import ipaddress
 import os
 import re
-import ipaddress
 from pathlib import Path
-from typing import Dict, Optional, List, Tuple, Union
-from dotenv import load_dotenv
 
 
 class ValidationError(Exception):
     """Configuration validation error."""
 
-    def __init__(self, message: str, field: Optional[str] = None):
+    def __init__(self, message: str, field: str | None = None):
         self.message = message
         self.field = field
         super().__init__(self.message)
@@ -23,27 +21,27 @@ class ValidationResult:
     def __init__(
         self,
         valid: bool,
-        errors: Optional[List[str]] = None,
-        warnings: Optional[List[str]] = None,
+        errors: list[str] | None = None,
+        warnings: list[str] | None = None,
     ):
         self.valid = valid
-        self.errors: List[str] = errors if errors is not None else []
-        self.warnings: List[str] = warnings if warnings is not None else []
+        self.errors: list[str] = errors if errors is not None else []
+        self.warnings: list[str] = warnings if warnings is not None else []
 
 
 class ConfigurationParser:
     """Parser for .env configuration files."""
 
-    def __init__(self, env_path: Optional[Path] = None):
+    def __init__(self, env_path: Path | None = None):
         """Initialize parser with optional .env file path.
 
         Args:
             env_path: Path to .env file. If None, looks in current directory.
         """
         self.env_path = env_path or Path.cwd() / ".env"
-        self.config: Dict[str, str] = {}
+        self.config: dict[str, str] = {}
 
-    def load(self) -> Dict[str, str]:
+    def load(self) -> dict[str, str]:
         """Load and parse .env file from current directory.
 
         Returns:
@@ -55,12 +53,29 @@ class ConfigurationParser:
         if not self.env_path.exists():
             raise FileNotFoundError(f"Configuration file {self.env_path} not found")
 
-        load_dotenv(self.env_path)
-        self.config = dict(os.environ)
+        # Clear config to avoid contamination from previous loads
+        self.config = {}
+
+        # Read and parse .env file line by line
+        with open(self.env_path) as f:
+            for line in f:
+                line = line.strip()
+
+                # Skip empty lines and comments
+                if not line or line.startswith("#"):
+                    continue
+
+                # Parse KEY=VALUE pairs
+                if "=" in line:
+                    key, value = line.split("=", 1)
+                    self.config[key.strip()] = value.strip()
+
+        # Also update environment variables for subprocess calls
+        os.environ.update(self.config)
 
         return self.config
 
-    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get(self, key: str, default: str | None = None) -> str | None:
         """Get configuration value by key.
 
         Args:
@@ -162,7 +177,7 @@ class ConfigurationParser:
         else:  # G or GB
             return value
 
-    def _parse_ports(self, ports_str: str) -> List[Dict[str, Union[int, bool]]]:
+    def _parse_ports(self, ports_str: str) -> list[dict[str, int | bool]]:
         """Parse port forwarding string (e.g., '8080:80,auto:443').
 
         Args:
@@ -188,9 +203,7 @@ class ConfigurationParser:
 
             try:
                 if host_port.lower() == "auto":
-                    ports.append(
-                        {"host": 0, "container": int(container_port), "auto": True}
-                    )
+                    ports.append({"host": 0, "container": int(container_port), "auto": True})
                 else:
                     ports.append(
                         {
@@ -199,7 +212,7 @@ class ConfigurationParser:
                             "auto": False,
                         }
                     )
-            except ValueError as e:
+            except ValueError:
                 raise ValidationError(f"Invalid port mapping: {mapping}", "PORTS")
 
         return ports
@@ -219,7 +232,7 @@ class ConfigurationParser:
         except ipaddress.AddressValueError:
             return False
 
-    def _check_port_conflicts(self, ports: List[Dict[str, int]]) -> List[int]:
+    def _check_port_conflicts(self, ports: list[dict[str, int]]) -> list[int]:
         """Check for port conflicts with running infrastructure.
 
         Args:
@@ -228,7 +241,7 @@ class ConfigurationParser:
         Returns:
             List of conflicting port numbers.
         """
-        conflicts = []
+        conflicts: list[int] = []
 
         # Extract host ports (excluding auto-assigned)
         host_ports = [p["host"] for p in ports if not p["auto"] and p["host"] > 0]
@@ -262,8 +275,8 @@ class ConfigurationParser:
         Raises:
             ValidationError: If configuration has critical errors.
         """
-        errors: List[str] = []
-        warnings: List[str] = []
+        errors: list[str] = []
+        warnings: list[str] = []
 
         # Check required fields
         if "INFRA_TYPE" not in self.config:
@@ -271,9 +284,7 @@ class ConfigurationParser:
         else:
             infra_type = self.config["INFRA_TYPE"]
             if infra_type not in ("vm", "container"):
-                errors.append(
-                    f"INFRA_TYPE must be 'vm' or 'container', got: {infra_type}"
-                )
+                errors.append(f"INFRA_TYPE must be 'vm' or 'container', got: {infra_type}")
 
             # Validate provider for VM
             if infra_type == "vm" and "PROVIDER" not in self.config:
@@ -283,9 +294,7 @@ class ConfigurationParser:
             if infra_type == "container":
                 # Containers don't require DISK_SIZE
                 if "DISK_SIZE" in self.config:
-                    warnings.append(
-                        "DISK_SIZE is not applicable for container infrastructure"
-                    )
+                    warnings.append("DISK_SIZE is not applicable for container infrastructure")
 
         # Validate MEMORY
         if "MEMORY" in self.config:
@@ -318,9 +327,7 @@ class ConfigurationParser:
         if "NETWORK_MODE" in self.config:
             network_mode = self.config["NETWORK_MODE"]
             if network_mode not in ("bridge", "default"):
-                errors.append(
-                    f"NETWORK_MODE must be 'bridge' or 'default', got: {network_mode}"
-                )
+                errors.append(f"NETWORK_MODE must be 'bridge' or 'default', got: {network_mode}")
 
         # Validate IP_ADDRESS
         if "IP_ADDRESS" in self.config:
@@ -337,7 +344,7 @@ class ConfigurationParser:
         return ValidationResult(len(errors) == 0, errors, warnings)
 
 
-def load_config(env_path: Optional[Path] = None) -> Dict[str, str]:
+def load_config(env_path: Path | None = None) -> dict[str, str]:
     """Load configuration from .env file.
 
     Args:

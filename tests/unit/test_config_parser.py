@@ -1,8 +1,8 @@
 """Unit tests for configuration parser."""
 
 import pytest
-from pathlib import Path
-from config.parser import ConfigurationParser, ValidationError, ValidationResult
+
+from config.parser import ConfigurationParser, ValidationError
 
 
 @pytest.fixture
