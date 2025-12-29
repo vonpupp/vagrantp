@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 001-template-driven-infra
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # Test on all Python versions with minimal dependencies
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install uv
+        run: |
+          pip install uv
+
+      - name: Install test dependencies
+        run: |
+          uv sync --group test
+
+      - name: Test with pytest
+        run: |
+          uv run pytest tests/
+
+  # Lint and type-check on latest Python only
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: 'pip'
+
+      - name: Install uv
+        run: |
+          pip install uv
+
+      - name: Install dev dependencies
+        run: |
+          uv sync --group test --group dev
+
+      - name: Lint with Ruff, Pyrefly, and Deadcode
+        run: |
+          uv run ruff check --output-format=github .
+          uv run ruff format --diff
+          uv run pyrefly check src/
+          uv run deadcode src/
+
+  # Coverage on latest Python only
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: 'pip'
+
+      - name: Install uv
+        run: |
+          pip install uv
+
+      - name: Install dev dependencies
+        run: |
+          uv sync --group test --group dev
+
+      - name: Test with coverage
+        run: |
+          uv run pytest --cov --cov-report=xml tests/
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}

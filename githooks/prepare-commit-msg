@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+
+# Git prepare-commit-msg hook to rewrite and validate commit messages
+
+set -euo pipefail
+
+MSG_FILE="${1:-}"
+COMMIT_SOURCE="${2:-}"
+SHA="${3:-}"
+
+if [ -z "$MSG_FILE" ]; then
+  echo "Error: No message file provided" >&2
+  exit 1
+fi
+
+# Run the Python script to rewrite commit message format
+if [ -f "scripts/rewrite_commit_msg.py" ]; then
+  python scripts/rewrite_commit_msg.py "$MSG_FILE"
+fi
+
+# Run gitlint to validate commit message format
+if command -v gitlint &> /dev/null; then
+  gitlint --msg-filename="$MSG_FILE" || {
+    echo "gitlint: Commit message does not follow Conventional Commits format." >&2
+    echo "Expected format: type: description" >&2
+    echo "Types: feat, fix, docs, style, refactor, perf, test, chore" >&2
+    echo "Example: feat: add user authentication" >&2
+    exit 1
+  }
+fi
+
+# Add AI-generated trailers
+IS_AI=0
+PARENT_CMD=""
+AI_MODEL="${AI_MODEL:-opencode}"
+
+# Method 1: Explicit environment variable (most reliable)
+[ "${AI_COMMIT:-}" = "1" ] && IS_AI=1
+
+# Method 2: Trace parent process tree to find original invoker
+trace_parents() {
+  local pid=$$
+  local max_depth=10
+  local cmd
+
+  while [ $max_depth -gt 0 ] && [ "$pid" != "1" ]; do
+    pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+    [ -z "$pid" ] && break
+    cmd=$(ps -o comm= -p "$pid" 2>/dev/null || true)
+    [ -z "$cmd" ] && continue
+
+    case "$cmd" in
+      opencode|ollama|uv|python|invoke|anthropic|openai)
+        echo "$cmd"
+        return 0
+        ;;
+    esac
+
+    ((max_depth--))
+  done
+
+  return 1
+}
+
+# Check parent processes
+if PARENT_CMD=$(trace_parents); then
+  case "$PARENT_CMD" in
+    opencode|ollama|anthropic|openai)
+      IS_AI=1
+      ;;
+  esac
+else
+  PARENT_CMD=""
+fi
+
+# Method 3: Non-interactive commit (stdin not a tty)
+[ ! -t 0 ] && IS_AI=1
+
+# Method 4: Check for CI environment
+[ -n "${CI:-}" ] && IS_AI=1
+
+# Add trailers if AI detected
+if [ "$IS_AI" = "1" ]; then
+  if [ -n "$PARENT_CMD" ]; then
+    GENERATED_BY="$PARENT_CMD"
+  else
+    GENERATED_BY="opencode"
+  fi
+
+  git interpret-trailers \
+    --in-place \
+    --if-exists replace \
+    --trailer "Generated-by: $GENERATED_BY" \
+    --if-exists replace \
+    --trailer "Actor: AI ($AI_MODEL)" \
+    "$MSG_FILE"
+fi

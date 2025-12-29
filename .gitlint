@@ -1,0 +1,32 @@
+[general]
+# Ignore merge commits
+ignore-merge-commits = true
+
+# Ignore fixup/squash commits created by git rebase
+ignore-fixup-commits = true
+ignore-squash-commits = true
+
+# Allow single-line commits (no body required)
+ignore = B6
+
+
+
+[title-max-length]
+line-length = 72
+
+
+[title-min-length]
+min-length = 5
+
+
+[title-match-regex]
+# Conventional Commits (lenient, scope optional)
+regex = ^(feat|fix|docs|style|refactor|perf|test|chore)(\([a-z0-9_-]+\))?: .+$
+
+
+[body-max-line-length]
+line-length = 100
+
+
+[body-min-length]
+min-length = 0
