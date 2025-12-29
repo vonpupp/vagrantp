@@ -100,6 +100,30 @@ class ContainerManager:
         except subprocess.CalledProcessError as e:
             raise VagrantpError(f"Failed to create container: {e}")
 
+    def start(self) -> None:
+        """Start a stopped container.
+
+        Raises:
+            VagrantpError: If start fails.
+        """
+        state = self._get_state()
+
+        if state == InfrastructureState.RUNNING:
+            print(f"ℹ Container '{self.infra_id}' is already running")
+            return
+
+        if state == InfrastructureState.NOT_CREATED:
+            print(f"ℹ Container '{self.infra_id}' does not exist")
+            return
+
+        print(f"  Starting container '{self.infra_id}'...")
+
+        try:
+            run_command(["podman", "start", self.infra_id], cwd=self.project_dir)
+            print("✓ Container started")
+        except subprocess.CalledProcessError as e:
+            raise VagrantpError(f"Failed to start container: {e}")
+
     def connect(self, command: str | None = None) -> None:
         """Establish SSH connection to container.
 

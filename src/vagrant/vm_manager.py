@@ -90,6 +90,30 @@ class VMManager:
         except subprocess.CalledProcessError as e:
             raise VagrantpError(f"Failed to create VM: {e}")
 
+    def start(self) -> None:
+        """Start a stopped VM.
+
+        Raises:
+            VagrantpError: If start fails.
+        """
+        state = self._get_state()
+
+        if state == InfrastructureState.RUNNING:
+            print(f"ℹ VM '{self.infra_id}' is already running")
+            return
+
+        if state == InfrastructureState.NOT_CREATED:
+            print(f"ℹ VM '{self.infra_id}' does not exist")
+            return
+
+        print(f"  Starting VM '{self.infra_id}'...")
+
+        try:
+            run_command(["vagrant", "up"], cwd=self.project_dir, check=False)
+            print("✓ VM started")
+        except subprocess.CalledProcessError as e:
+            raise VagrantpError(f"Failed to start VM: {e}")
+
     def connect(self, command: str | None = None) -> None:
         """Establish SSH connection to VM.
 

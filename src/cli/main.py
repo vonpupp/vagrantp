@@ -63,9 +63,18 @@ def up(c, dry_run=False, no_provision=False):
         if current_state != InfrastructureState.NOT_CREATED:
             if current_state == InfrastructureState.RUNNING:
                 raise InfrastructureExistsError(infra_id, current_state.value)
+            elif current_state == InfrastructureState.STOPPED:
+                print("✓ Configuration validated")
+                print("→ Starting stopped infrastructure...")
+                print(f"  INFRA_TYPE: {infra_type}")
+                print(f"  ID: {infra_id}")
+                manager.start()
+                if not no_provision and config.get("PROVISIONING_PLAYBOOK"):
+                    print("ℹ Provisioning not yet implemented")
+                    print("  This will be implemented in Phase 6")
+                return
             else:
                 print(f"ℹ Infrastructure '{infra_id}' exists in state: {current_state.value}")
-                print("  Run 'vagrantp up' to start, or 'vagrantp rm' to recreate")
                 return
 
         print("✓ Configuration validated")
