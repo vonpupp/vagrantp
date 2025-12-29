@@ -40,17 +40,22 @@ pip install uv
 # Install development dependencies
 uv sync --group test --group dev
 
+# Install custom git hooks from githooks directory first
+git config core.hooksPath githooks
+
+# Install pre-commit hooks to the custom hooks directory
+uv run pre-commit install --hook-dir githooks
+
 # Run tests
-uv run pytest tests/
+uv run pytest --cov=src tests/
 
 # Run linting
 uv run ruff check .
-uv run ruff format .
-uv run pyrefly check src/
-uv run deadcode src/
+... individual tests ...
 
-# Run tests with coverage
-uv run pytest --cov=src tests/
+# Run all pre-commit at once
+uv run pre-commit
+
 ```
 
 ### CI/CD
@@ -58,13 +63,6 @@ uv run pytest --cov=src tests/
 This project uses GitHub Actions for continuous integration:
 
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for details.
-
-### Code Quality Tools
-
-- **Ruff**: Fast Python linter and formatter
-- **Pyrefly**: Type checker (alternative to mypy)
-- **Deadcode**: Dead code detector
-- **pytest**: Testing framework with coverage support
 
 ## Quick Start
 
