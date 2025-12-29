@@ -6,6 +6,10 @@ ignore-merge-commits = true
 ignore-fixup-commits = true
 ignore-squash-commits = true
 
+# Allow single-line commits (no body required)
+ignore = B6
+
+
 
 [title-max-length]
 line-length = 72
@@ -22,3 +26,7 @@ regex = ^(feat|fix|docs|style|refactor|perf|test|chore)(\([a-z0-9_-]+\))?: .+$
 
 [body-max-line-length]
 line-length = 100
+
+
+[body-min-length]
+min-length = 0
