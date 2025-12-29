@@ -47,8 +47,7 @@
 - [ ] T012 [P] Create error handling module in src/utils/helpers.py with structured error classes matching contracts/cli-api.md error codes
 - [ ] T013 [P] Create utility functions in src/utils/helpers.py for file operations, shell command execution, and logging
 - [ ] T014 Create template base class in src/utils/helpers.py for ERB template rendering
-- [ ] T015 Create performance measurement decorator in src/utils/helpers.py for timing operations
-- [ ] T016 Create default Ansible playbook structure in ansible/site.yml and ansible/roles/base/
+- [ ] T015 Create default Ansible playbook structure in ansible/site.yml and ansible/roles/base/
 - [ ] T017 Create test fixture for sample .env configuration in tests/fixtures/sample.env
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
@@ -69,15 +68,14 @@
 - [ ] T021 [US1] Implement VM creation logic in src/vagrant/vm_manager.py create() that generates Vagrantfile from template and delegates to Vagrant CLI
 - [ ] T022 [US1] Implement VM stop logic in src/vagrant/vm_manager.py stop() with graceful and force modes
 - [ ] T023 [US1] Implement VM removal logic in src/vagrant/vm_manager.py remove() that cleans up all VM resources including disk images and network config
-- [ ] T024 [US1] Implement up CLI command in src/cli/main.py that reads .env, validates config, creates VM using vm_manager, and displays progress
+- [ ] T023a [US1] Verify network connectivity in src/vagrant/vm_manager.py after VM creation to ensure IP is reachable and SSH port is accessible (ping and port check)
+- [ ] T024 [US1] Implement up CLI command in src/cli/main.py that reads .env, validates config, creates VM using vm_manager, and displays simple status messages
 - [ ] T025 [US1] Implement ssh CLI command in src/cli/main.py that reads .env, establishes SSH connection using vm_manager
 - [ ] T026 [US1] Implement stop CLI command in src/cli/main.py that reads .env, stops VM using vm_manager with --force option
 - [ ] T027 [US1] Implement rm CLI command in src/cli/main.py that reads .env, removes VM using vm_manager with --force option and confirmation prompt
-- [ ] T028 [US1] Add idempotency check in up CLI command to prevent duplicate VM creation (FR-016)
+- [ ] T028 [US1] Add idempotency check in up CLI command to prevent duplicate VM creation (FR-015)
 - [ ] T029 [US1] Add error messages in all CLI commands per contracts/cli-api.md (CONFIG_MISSING, CONFIG_INVALID, INFRA_EXISTS, PROVIDER_NOT_AVAILABLE)
-- [ ] T030 [US1] Add progress indicators in up CLI command for operations > 10 seconds per research.md
-- [ ] T031 [US1] Add performance logging in all CLI commands to measure operation times (FR-021)
-- [ ] T032 [US1] Create integration test in tests/integration/test_vm_lifecycle.py for full VM lifecycle (up → ssh → stop → rm)
+- [ ] T030 [US1] Create integration test in tests/integration/test_vm_lifecycle.py for full VM lifecycle (up → ssh → stop → rm)
 - [ ] T033 [US1] Create unit tests in tests/unit/test_vm_manager.py for VM manager methods using mocked Vagrant CLI calls
 - [ ] T034 [US1] Create unit tests in tests/unit/test_config_parser.py for .env parsing and validation with VM-specific test cases
 
@@ -162,7 +160,7 @@
 - [ ] T075 [US4] Add dry-run mode support in src/provision/ansible.py execute() for Ansible playbook validation
 - [ ] T076 [US4] Integrate provisioning into up CLI command in src/cli/main.py with --no-provision option to skip provisioning
 - [ ] T077 [US4] Add provisioning progress indicators in up CLI command showing playbook execution progress
-- [ ] T078 [US4] Add error handling for provisioning failures with clear error messages showing failure point (FR-021, exit code 7)
+- [ ] T078 [US4] Add error handling for provisioning failures with clear error messages showing failure point (exit code 7)
 - [ ] T079 [US4] Add idempotency support for provisioning by checking if provisioning already succeeded
 - [ ] T080 [US4] Create default Ansible playbook in ansible/site.yml that installs base packages (git, vim, tmux)
 - [ ] T081 [US4] Create integration test in tests/integration/test_vm_lifecycle.py for VM provisioning workflow
@@ -203,12 +201,11 @@
 - [ ] T094 [P] Update README.md with quick start guide and configuration reference
 - [ ] T095 [P] Add command-line help text in src/cli/main.py for all commands (--help)
 - [ ] T096 [P] Add version command in src/cli/main.py (--version)
-- [ ] T097 Add performance optimization: Cache parsed configuration in src/config/parser.py to avoid re-reading .env file multiple times
-- [ ] T098 Add performance optimization: Implement lazy initialization in CLI commands to load resources only when needed
-- [ ] T099 Add signal handling for Ctrl+C in all CLI commands to gracefully cancel operations with cleanup
-- [ ] T100 Add logging infrastructure in src/utils/helpers.py with configurable log levels and output to file
-- [ ] T101 [P] Add unit tests for error handling in tests/unit/test_error_handling.py covering all error codes from contracts/cli-api.md
-- [ ] T102 [P] Add integration tests for edge cases in tests/integration/ (infrastructure already exists, insufficient resources, missing .env, provider not available)
+- [ ] T097 Add signal handling for Ctrl+C in all CLI commands to gracefully cancel operations with cleanup
+- [ ] T098 Add logging infrastructure in src/utils/helpers.py with configurable log levels and output to file
+- [ ] T101 [P] Add network connectivity verification test in tests/integration/ that verifies IP reachability and port accessibility for both VMs and containers per Constitution L115
+- [ ] T102 [P] Add unit tests for error handling in tests/unit/test_error_handling.py covering all error codes from contracts/cli-api.md
+- [ ] T103 [P] Add integration tests for edge cases in tests/integration/ (infrastructure already exists, insufficient resources, missing .env, provider not available)
 - [ ] T103 Security hardening: Add file permission checks in src/config/parser.py to ensure .env has appropriate permissions (600)
 - [ ] T104 Security hardening: Add input validation in src/utils/helpers.py to prevent command injection in subprocess calls
 - [ ] T105 Run quickstart.md validation: Test all examples from quickstart.md end-to-end
@@ -257,7 +254,7 @@
 - Within US3: All configuration parsing extensions can run in parallel (T050-T055)
 - Within US4: Provisioning orchestrator and config parsing can run in parallel (T070, T071, T072)
 - Within US5: All validation extensions can run in parallel (T085-T088)
-- Polish tasks marked [P] can run in parallel (T094, T095, T101, T102)
+- Polish tasks marked [P] can run in parallel (T094, T095, T101, T103)
 
 ---
 

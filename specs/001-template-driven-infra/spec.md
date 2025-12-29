@@ -237,7 +237,7 @@ A developer wants to ensure their .env configuration is valid before creating in
 - **FR-001**: System MUST support creating virtual machine infrastructure from a .env configuration file in the current project directory
 - **FR-002**: System MUST support creating Podman container infrastructure from a .env configuration file in the current project directory
 - **FR-003**: System MUST allow users to configure infrastructure resources including RAM size, CPU count, disk size, and networking settings via .env file
-- **FR-004**: System MUST provide a wrapper command interface with subcommands: up, ssh, stop, and rm
+- **FR-004**: System MUST provide a CLI interface with subcommands: up, ssh, stop, and rm, which automatically read configuration from the current project directory
 - **FR-005**: System MUST use the project directory name as the default identifier for infrastructure instances, with Vagrant's automatic hash/number suffixing handling naming conflicts
 - **FR-006**: System MUST use the project directory path as the default context for locating configuration files
 - **FR-007**: System MUST support automated provisioning script execution for infrastructure configuration after creation
@@ -246,15 +246,12 @@ A developer wants to ensure their .env configuration is valid before creating in
 - **FR-010**: System MUST display clear error messages when configuration is invalid or infrastructure creation fails
 - **FR-011**: System MUST support stopping and removing infrastructure without affecting other projects
 - **FR-012**: System MUST not require users to create or maintain individual infrastructure definition files for each project
-- **FR-013**: System MUST automatically read infrastructure configuration from the current project directory when wrapper commands are executed
-- **FR-014**: System MUST support fixed IP assignment for infrastructure when configured
-- **FR-015**: System MUST support port forwarding configuration for infrastructure
-- **FR-016**: System MUST provide idempotent infrastructure operations (running `$WRAPPER up` multiple times on the same project should not create duplicate infrastructure)
-- **FR-017**: System MUST support both bridge and default networking modes
-- **FR-018**: System MUST automatically assign a unique name to infrastructure if not specified in .env, leveraging Vagrant's built-in naming conflict resolution with hash/number suffixes
-- **FR-019**: System MUST allow users to specify custom provisioning scripts/playbooks via .env configuration
-- **FR-020**: System MUST provide clear status feedback for all wrapper operations
-- **FR-021**: System MUST measure and log performance metrics for all operations (creation time, connection time, stop time, remove time) for documentation purposes
+- **FR-013**: System MUST support fixed IP assignment for infrastructure when configured
+- **FR-014**: System MUST support port forwarding configuration for infrastructure
+- **FR-015**: System MUST provide idempotent infrastructure operations (running `$WRAPPER up` multiple times on the same project should not create duplicate infrastructure)
+- **FR-016**: System MUST support both bridge and default networking modes
+- **FR-017**: System MUST allow users to specify custom provisioning scripts/playbooks via .env configuration
+- **FR-018**: System MUST provide clear status feedback for all wrapper operations (e.g., "container created", "container removed")
 
 ## Clarifications
 
@@ -278,7 +275,7 @@ A developer wants to ensure their .env configuration is valid before creating in
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can create a new project with configured infrastructure efficiently (system will measure and document actual creation times without pre-defined targets)
+- **SC-001**: Users can create a new project with configured infrastructure successfully
 - **SC-002**: Users can switch between multiple projects and manage their infrastructure independently without conflicts
 - **SC-003**: 100% of infrastructure operations (up, ssh, stop, rm) complete successfully when using valid configurations
 - **SC-004**: System detects and reports 100% of configuration errors before attempting infrastructure creation

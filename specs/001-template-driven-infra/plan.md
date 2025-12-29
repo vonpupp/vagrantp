@@ -17,8 +17,7 @@ Create a template-driven infrastructure system using Vagrant that allows develop
 **Testing**: pytest (for Python wrapper) or Bash testing framework (for Bash wrapper)
 **Target Platform**: Linux (host system)
 **Project Type**: single
-**Performance Goals**: Not specified - operation times will be measured and logged without pre-defined targets
-**Constraints**: Idempotent operations, CLI interface must be simple and fast, must support multiple concurrent projects
+**Constraints**: Idempotent operations, CLI interface must be simple, must support multiple concurrent projects
 **Scale/Scope**: No enforced limits - rely on host OS cgroups and kernel resource management
 
 ## Constitution Check
