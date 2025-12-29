@@ -1,0 +1,55 @@
+---
+# Default Ansible playbook for Vagrantp
+# This playbook installs base packages and configures system
+
+- name: Configure infrastructure
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Update package cache (Debian/Ubuntu)
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Update package cache (Arch Linux)
+      pacman:
+        update_cache: true
+      when: ansible_os_family == "Archlinux"
+
+    - name: Update package cache (RHEL/CentOS/Fedora)
+      yum:
+        update_cache: true
+      when: ansible_os_family == "RedHat"
+
+    - name: Install base packages
+      package:
+        name:
+          - git
+          - vim
+          - tmux
+          - curl
+          - wget
+        state: present
+
+    - name: Create .ssh directory
+      file:
+        path: /root/.ssh
+        state: directory
+        mode: "0700"
+
+    - name: Ensure SSH service is running
+      service:
+        name: sshd
+        state: started
+        enabled: true
+      when: ansible_service_mgr == 'systemd'
+
+    - name: Ensure SSH service is running (non-systemd)
+      service:
+        name: ssh
+        state: started
+        enabled: true
+      when: ansible_service_mgr != 'systemd'

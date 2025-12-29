@@ -24,13 +24,13 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create project structure: src/cli/, src/config/, src/vagrant/, src/podman/, src/provision/, src/utils/, tests/integration/, tests/unit/, tests/fixtures/, templates/, ansible/
-- [ ] T002 Create pyproject.toml with dependencies: invoke>=2.0, python-dotenv>=1.0.0, vagrant>=2.3, pytest>=7.0, pytest-mock>=3.10
-- [ ] T003 Create requirements.txt from pyproject.toml dependencies
-- [ ] T004 Create setup.py for package installation
-- [ ] T005 [P] Create __init__.py files in all src/ directories
-- [ ] T006 [P] Create README.md with project overview and installation instructions
-- [ ] T007 [P] Create .gitignore for Python, Vagrant, and Podman artifacts
+- [X] T001 Create project structure: src/cli/, src/config/, src/vagrant/, src/podman/, src/provision/, src/utils/, tests/integration/, tests/unit/, tests/fixtures/, templates/, ansible/
+- [X] T002 Create pyproject.toml with dependencies: invoke>=2.0, python-dotenv>=1.0.0, vagrant>=2.3, pytest>=7.0, pytest-mock>=3.10
+- [X] T003 Create requirements.txt from pyproject.toml dependencies
+- [X] T004 Create setup.py for package installation
+- [X] T005 [P] Create __init__.py files in all src/ directories
+- [X] T006 [P] Create README.md with project overview and installation instructions
+- [X] T007 [P] Create .gitignore for Python, Vagrant, and Podman artifacts
 
 ---
 
@@ -40,15 +40,15 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T008 Create configuration file parser in src/config/parser.py that loads and parses .env files from current directory
-- [ ] T009 [P] Create configuration validator in src/config/parser.py that validates INFRA_TYPE, MEMORY, CPUS, DISK_SIZE per data-model.md rules
-- [ ] T010 [P] Create infrastructure state manager in src/utils/helpers.py for tracking infrastructure states (not_created, creating, running, stopped, removing)
-- [ ] T011 Create base CLI task structure in src/cli/main.py using Invoke framework with command registration
-- [ ] T012 [P] Create error handling module in src/utils/helpers.py with structured error classes matching contracts/cli-api.md error codes
-- [ ] T013 [P] Create utility functions in src/utils/helpers.py for file operations, shell command execution, and logging
-- [ ] T014 Create template base class in src/utils/helpers.py for ERB template rendering
-- [ ] T015 Create default Ansible playbook structure in ansible/site.yml and ansible/roles/base/
-- [ ] T017 Create test fixture for sample .env configuration in tests/fixtures/sample.env
+- [X] T008 Create configuration file parser in src/config/parser.py that loads and parses .env files from current directory
+- [X] T009 [P] Create configuration validator in src/config/parser.py that validates INFRA_TYPE, MEMORY, CPUS, DISK_SIZE per data-model.md rules
+- [X] T010 [P] Create infrastructure state manager in src/utils/helpers.py for tracking infrastructure states (not_created, creating, running, stopped, removing)
+- [X] T011 Create base CLI task structure in src/cli/main.py using Invoke framework with command registration
+- [X] T012 [P] Create error handling module in src/utils/helpers.py with structured error classes matching contracts/cli-api.md error codes
+- [X] T013 [P] Create utility functions in src/utils/helpers.py for file operations, shell command execution, and logging
+- [X] T014 Create template base class in src/utils/helpers.py for ERB template rendering
+- [X] T015 Create default Ansible playbook structure in ansible/site.yml and ansible/roles/base/
+- [X] T017 Create test fixture for sample .env configuration in tests/fixtures/sample.env
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -62,22 +62,22 @@
 
 ### Implementation for User Story 1
 
-- [ ] T018 [P] [US1] Create VM provider interface in src/vagrant/vm_manager.py with methods: create(), connect(), stop(), remove()
-- [ ] T019 [P] [US1] Create Vagrantfile template for VMs in templates/vm.erb with configurable resources, networking, and SSH settings
-- [ ] T020 [P] [US1] Create SSH connection handler in src/vagrant/vm_manager.py that establishes interactive SSH sessions
-- [ ] T021 [US1] Implement VM creation logic in src/vagrant/vm_manager.py create() that generates Vagrantfile from template and delegates to Vagrant CLI
-- [ ] T022 [US1] Implement VM stop logic in src/vagrant/vm_manager.py stop() with graceful and force modes
-- [ ] T023 [US1] Implement VM removal logic in src/vagrant/vm_manager.py remove() that cleans up all VM resources including disk images and network config
-- [ ] T023a [US1] Verify network connectivity in src/vagrant/vm_manager.py after VM creation to ensure IP is reachable and SSH port is accessible (ping and port check)
-- [ ] T024 [US1] Implement up CLI command in src/cli/main.py that reads .env, validates config, creates VM using vm_manager, and displays simple status messages
-- [ ] T025 [US1] Implement ssh CLI command in src/cli/main.py that reads .env, establishes SSH connection using vm_manager
-- [ ] T026 [US1] Implement stop CLI command in src/cli/main.py that reads .env, stops VM using vm_manager with --force option
-- [ ] T027 [US1] Implement rm CLI command in src/cli/main.py that reads .env, removes VM using vm_manager with --force option and confirmation prompt
-- [ ] T028 [US1] Add idempotency check in up CLI command to prevent duplicate VM creation (FR-015)
-- [ ] T029 [US1] Add error messages in all CLI commands per contracts/cli-api.md (CONFIG_MISSING, CONFIG_INVALID, INFRA_EXISTS, PROVIDER_NOT_AVAILABLE)
-- [ ] T030 [US1] Create integration test in tests/integration/test_vm_lifecycle.py for full VM lifecycle (up → ssh → stop → rm)
-- [ ] T033 [US1] Create unit tests in tests/unit/test_vm_manager.py for VM manager methods using mocked Vagrant CLI calls
-- [ ] T034 [US1] Create unit tests in tests/unit/test_config_parser.py for .env parsing and validation with VM-specific test cases
+- [X] T018 [P] [US1] Create VM provider interface in src/vagrant/vm_manager.py with methods: create(), connect(), stop(), remove()
+- [X] T019 [P] [US1] Create Vagrantfile template for VMs in templates/vm.erb with configurable resources, networking, and SSH settings
+- [X] T020 [P] [US1] Create SSH connection handler in src/vagrant/vm_manager.py that establishes interactive SSH sessions
+- [X] T021 [US1] Implement VM creation logic in src/vagrant/vm_manager.py create() that generates Vagrantfile from template and delegates to Vagrant CLI
+- [X] T022 [US1] Implement VM stop logic in src/vagrant/vm_manager.py stop() with graceful and force modes
+- [X] T023 [US1] Implement VM removal logic in src/vagrant/vm_manager.py remove() that cleans up all VM resources including disk images and network config
+- [X] T023a [US1] Verify network connectivity in src/vagrant/vm_manager.py after VM creation to ensure IP is reachable and SSH port is accessible (ping and port check)
+- [X] T024 [US1] Implement up CLI command in src/cli/main.py that reads .env, validates config, creates VM using vm_manager, and displays simple status messages
+- [X] T025 [US1] Implement ssh CLI command in src/cli/main.py that reads .env, establishes SSH connection using vm_manager
+- [X] T026 [US1] Implement stop CLI command in src/cli/main.py that reads .env, stops VM using vm_manager with --force option
+- [X] T027 [US1] Implement rm CLI command in src/cli/main.py that reads .env, removes VM using vm_manager with --force option and confirmation prompt
+- [X] T028 [US1] Add idempotency check in up CLI command to prevent duplicate VM creation (FR-015)
+- [X] T029 [US1] Add error messages in all CLI commands per contracts/cli-api.md (CONFIG_MISSING, CONFIG_INVALID, INFRA_EXISTS, PROVIDER_NOT_AVAILABLE)
+- [X] T030 [US1] Create integration test in tests/integration/test_vm_lifecycle.py for full VM lifecycle (up → ssh → stop → rm)
+- [X] T033 [US1] Create unit tests in tests/unit/test_vm_manager.py for VM manager methods using mocked Vagrant CLI calls
+- [X] T034 [US1] Create unit tests in tests/unit/test_config_parser.py for .env parsing and validation with VM-specific test cases
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 
