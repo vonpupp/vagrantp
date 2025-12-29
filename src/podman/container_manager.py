@@ -38,10 +38,8 @@ class ContainerManager:
                     "podman",
                     "ps",
                     "-a",
-                    "--filter",
-                    f"name={self.infra_id}",
                     "--format",
-                    "{{.Status}}",
+                    "{{.Names}}\t{{.Status}}",
                 ],
                 cwd=self.project_dir,
                 check=False,
@@ -50,15 +48,20 @@ class ContainerManager:
             if result.returncode != 0:
                 return InfrastructureState.NOT_CREATED
 
-            status = result.stdout.strip().lower()
+            for line in result.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                parts = line.split("\t", 1)
+                if len(parts) != 2:
+                    continue
 
-            if not status:
-                return InfrastructureState.NOT_CREATED
-
-            if "running" in status:
-                return InfrastructureState.RUNNING
-            elif any(s in status for s in ["stopped", "exited", "created"]):
-                return InfrastructureState.STOPPED
+                name, status = parts
+                if name == self.infra_id:
+                    status_lower = status.lower()
+                    if status_lower.startswith("up"):
+                        return InfrastructureState.RUNNING
+                    elif any(s in status_lower for s in ["stopped", "exited", "created"]):
+                        return InfrastructureState.STOPPED
         except (subprocess.CalledProcessError, Exception):
             pass
 
@@ -241,15 +244,13 @@ class ContainerManager:
                     "podman",
                     "ps",
                     "-a",
-                    "--filter",
-                    f"name={self.infra_id}",
                     "--format",
                     "{{.Names}}",
                 ],
                 cwd=self.project_dir,
                 check=False,
             )
-            return self.infra_id in result.stdout.strip()
+            return self.infra_id in result.stdout.strip().split("\n")
         except subprocess.CalledProcessError:
             return False
 

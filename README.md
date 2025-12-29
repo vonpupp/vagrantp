@@ -57,10 +57,6 @@ uv run pytest --cov=src tests/
 
 This project uses GitHub Actions for continuous integration:
 
-- **Testing**: Runs on Python 3.9, 3.10, 3.11, 3.12, 3.13, and 3.14
-- **Linting**: Uses Ruff for code style and formatting, Pyrefly for type checking
-- **Coverage**: Generates code coverage reports with pytest-cov
-
 See [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for details.
 
 ### Code Quality Tools
@@ -245,38 +241,3 @@ PORTS=8080:80,8081:443,auto:8082
 
 - **default**: Use default NAT/networking
 - **bridge**: Use bridged networking for direct network access
-
-## Troubleshooting
-
-### Infrastructure Already Exists
-
-```
-✗ Infrastructure 'myproject' already exists (state: running)
-  → Run 'vagrantp ssh' to connect, or 'vagrantp stop' then 'vagrantp rm' to recreate
-```
-
-### Configuration Not Found
-
-```
-✗ Configuration file .env not found in current directory
-  → Create a .env file with required INFRA_TYPE field
-```
-
-### Invalid Configuration
-
-```
-✗ Invalid value for MEMORY: must be ≥ 512MB, got: 256
-  → Check MEMORY field in .env file
-```
-
-## Documentation
-
-For detailed documentation, examples, and troubleshooting, see:
-
-- `specs/001-template-driven-infra/quickstart.md` - Detailed quick start guide
-- `specs/001-template-driven-infra/contracts/cli-api.md` - CLI API specification
-- `specs/001-template-driven-infra/data-model.md` - Data model and entities
-
-## License
-
-MIT
