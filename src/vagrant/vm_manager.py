@@ -175,22 +175,123 @@ class VMManager:
 
         Args:
             config: Configuration dictionary.
-        """
-        provider = config.get("PROVIDER", "virtualbox")
 
-        vagrantfile_content = f"""# -*- mode: ruby -*-
+        Raises:
+            VagrantpError: If configuration has errors.
+        """
+        try:
+            provider = config.get("PROVIDER", "virtualbox")
+            box = config.get("BOX", "generic/alpine319")
+            memory = config.get("MEMORY", "2048")
+            cpus = config.get("CPUS", "2")
+            disk_size = config.get("DISK_SIZE", "20G")
+            network_mode = config.get("NETWORK_MODE", "default")
+            ip_address = config.get("IP_ADDRESS", "")
+            ports_str = config.get("PORTS", "")
+
+            # Parse port mappings
+            ports = self._parse_ports(ports_str) if ports_str else []
+
+            # Build network configuration
+            network_config = self._build_network_config(network_mode, ip_address, ports)
+
+            # Build Vagrantfile
+            vagrantfile_content = f"""# -*- mode: ruby -*-
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "generic/alpine319"
+  config.vm.box = "{box}"
 
   config.vm.provider "{provider}" do |vb|
-    vb.memory = {config.get("MEMORY", "2048")}
-    vb.cpus = {config.get("CPUS", "2")}
+    vb.memory = {memory}
+    vb.cpus = {cpus}
+    vb.disk_size.size = "{disk_size}"
   end
+
+{network_config}
 
   config.ssh.forward_agent = true
 end
 """
 
-        self.vagrantfile_path.write_text(vagrantfile_content)
+            self.vagrantfile_path.write_text(vagrantfile_content)
+
+        except Exception as e:
+            raise VagrantpError(
+                f"Failed to generate Vagrantfile: {e}", ErrorCode.GENERAL_ERROR
+            )
+
+    def _build_network_config(
+        self, network_mode: str, ip_address: str, ports: list
+    ) -> str:
+        """Build network configuration section for Vagrantfile.
+
+        Args:
+            network_mode: Network mode (bridge or default).
+            ip_address: Fixed IP address if specified.
+            ports: List of port mappings.
+
+        Returns:
+            Network configuration string for Vagrantfile.
+        """
+        lines = []
+
+        # Add network mode
+        if network_mode == "bridge":
+            lines.append('  config.vm.network "public_network"')
+        elif ip_address:
+            lines.append(f'  config.vm.network "public_network", ip: "{ip_address}"')
+        else:
+            lines.append('  config.vm.network "private_network", type: "dhcp"')
+
+        # Add port forwarding
+        for port in ports:
+            if port["auto"]:
+                lines.append(
+                    f'  config.vm.network "forwarded_port", guest: {port["container"]}, host: 0, auto_correct: true'
+                )
+            else:
+                lines.append(
+                    f'  config.vm.network "forwarded_port", guest: {port["container"]}, host: {port["host"]}'
+                )
+
+        return "\n".join(lines)
+
+    def _parse_ports(self, ports_str: str) -> list:
+        """Parse port mappings string.
+
+        Args:
+            ports_str: Port mapping string (e.g., '8080:80,auto:443').
+
+        Returns:
+            List of port mapping dictionaries.
+        """
+        ports = []
+
+        for mapping in ports_str.split(","):
+            mapping = mapping.strip()
+
+            if ":" not in mapping:
+                continue
+
+            host_port, container_port = mapping.split(":", 1)
+            host_port = host_port.strip()
+            container_port = container_port.strip()
+
+            try:
+                if host_port.lower() == "auto":
+                    ports.append(
+                        {"host": 0, "container": int(container_port), "auto": True}
+                    )
+                else:
+                    ports.append(
+                        {
+                            "host": int(host_port),
+                            "container": int(container_port),
+                            "auto": False,
+                        }
+                    )
+            except ValueError:
+                continue
+
+        return ports

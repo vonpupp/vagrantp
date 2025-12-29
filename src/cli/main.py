@@ -17,10 +17,17 @@ from utils.helpers import (
     StateManager,
 )
 from vagrant.vm_manager import VMManager
+from podman.container_manager import ContainerManager
 
 
 @task
-def up(c, dry_run=False, no_provision=False):
+def show_version(c):
+    """Show version information."""
+    print("Vagrantp 1.0.0")
+
+
+@task(name="up")
+def up_task(c, dry_run=False, no_provision=False):
     """Create and start infrastructure.
 
     Args:
@@ -69,16 +76,22 @@ def up(c, dry_run=False, no_provision=False):
         print("✓ Configuration validated")
         print("→ Starting infrastructure...")
         print(f"  INFRA_TYPE: {infra_type}")
-        print(f"  PROVIDER: {config.get('PROVIDER')}")
+        if infra_type == "vm":
+            print(f"  PROVIDER: {config.get('PROVIDER')}")
+        else:
+            print(f"  IMAGE: {config.get('IMAGE', 'alpine:latest')}")
         print(f"  ID: {infra_id}")
 
         # Create infrastructure based on type
         if infra_type == "vm":
             vm_manager = VMManager(infra_id)
             vm_manager.create(config)
+        elif infra_type == "container":
+            container_manager = ContainerManager(infra_id)
+            container_manager.create(config)
         else:
-            print(f"ℹ Container infrastructure not yet implemented")
-            print("  This will be implemented in Phase 4")
+            print(f"✗ Unknown INFRA_TYPE: {infra_type}")
+            sys.exit(ErrorCode.CONFIG_ERROR.value)
 
         # TODO: Implement provisioning
         if not no_provision and config.get("PROVISIONING_PLAYBOOK"):
@@ -102,8 +115,8 @@ def up(c, dry_run=False, no_provision=False):
         sys.exit(e.code.value)
 
 
-@task
-def ssh(c, command=None):
+@task(name="ssh")
+def ssh_task(c, command=None):
     """Connect to infrastructure.
 
     Args:
@@ -122,9 +135,12 @@ def ssh(c, command=None):
         if infra_type == "vm":
             vm_manager = VMManager(infra_id)
             vm_manager.connect(command)
+        elif infra_type == "container":
+            container_manager = ContainerManager(infra_id)
+            container_manager.connect(command)
         else:
-            print(f"ℹ Container infrastructure not yet implemented")
-            print("  This will be implemented in Phase 4")
+            print(f"✗ Unknown INFRA_TYPE: {infra_type}")
+            sys.exit(ErrorCode.CONFIG_ERROR.value)
 
     except ConfigNotFoundError as e:
         print(f"✗ {e.message}")
@@ -138,8 +154,8 @@ def ssh(c, command=None):
         sys.exit(e.code.value)
 
 
-@task
-def stop(c, force=False):
+@task(name="stop")
+def stop_task(c, force=False):
     """Stop infrastructure.
 
     Args:
@@ -158,9 +174,12 @@ def stop(c, force=False):
         if infra_type == "vm":
             vm_manager = VMManager(infra_id)
             vm_manager.stop(force)
+        elif infra_type == "container":
+            container_manager = ContainerManager(infra_id)
+            container_manager.stop(force)
         else:
-            print(f"ℹ Container infrastructure not yet implemented")
-            print("  This will be implemented in Phase 4")
+            print(f"✗ Unknown INFRA_TYPE: {infra_type}")
+            sys.exit(ErrorCode.CONFIG_ERROR.value)
 
     except ConfigNotFoundError as e:
         print(f"✗ {e.message}")
@@ -174,8 +193,8 @@ def stop(c, force=False):
         sys.exit(e.code.value)
 
 
-@task
-def rm(c, force=False):
+@task(name="rm")
+def rm_task(c, force=False):
     """Remove infrastructure.
 
     Args:
@@ -206,166 +225,24 @@ def rm(c, force=False):
                         return
 
             vm_manager.remove(force)
+        elif infra_type == "container":
+            container_manager = ContainerManager(infra_id)
+
+            if not force:
+                state = container_manager.state_manager.get_state(infra_id)
+                if state != InfrastructureState.NOT_CREATED:
+                    print(
+                        f"⚠ Warning: This will permanently remove infrastructure '{infra_id}'"
+                    )
+                    response = input("→ Type 'yes' to confirm: ")
+                    if response.lower() != "yes":
+                        print("✗ Removal cancelled")
+                        return
+
+            container_manager.remove(force)
         else:
-            print(f"ℹ Container infrastructure not yet implemented")
-            print("  This will be implemented in Phase 4")
-
-    except ConfigNotFoundError as e:
-        print(f"✗ {e.message}")
-        if e.suggestion:
-            print(f"  → {e.suggestion}")
-        sys.exit(ErrorCode.CONFIG_ERROR.value)
-    except VagrantpError as e:
-        print(f"✗ {e.message}")
-        if e.suggestion:
-            print(f"  → {e.suggestion}")
-        sys.exit(e.code.value)
-
-
-@task
-def ssh(c, command=None):
-    """Connect to infrastructure.
-
-    Args:
-        c: Invoke context.
-        command: Execute single command and exit.
-    """
-    try:
-        # Load configuration
-        parser = ConfigurationParser()
-        config = parser.load()
-
-        # Get infrastructure ID
-        infra_id = config.get("INFRA_ID", Path.cwd().name)
-
-        # Check infrastructure state
-        state_manager = StateManager()
-        current_state = state_manager.get_state(infra_id)
-
-        if current_state != InfrastructureState.RUNNING:
-            print(
-                f"✗ Infrastructure '{infra_id}' is not running (state: {current_state.value})"
-            )
-            print("  → Run 'vagrantp up' to start the infrastructure")
-            sys.exit(ErrorCode.GENERAL_ERROR.value)
-
-        print(f"ℹ SSH connection to '{infra_id}'")
-        if command:
-            print(f"  Command: {command}")
-        else:
-            print("  Interactive shell")
-
-        # TODO: Implement SSH connection
-        print("ℹ SSH connection not yet implemented")
-        print("  This is a placeholder for Phase 3 implementation")
-
-    except ConfigNotFoundError as e:
-        print(f"✗ {e.message}")
-        if e.suggestion:
-            print(f"  → {e.suggestion}")
-        sys.exit(ErrorCode.CONFIG_ERROR.value)
-    except VagrantpError as e:
-        print(f"✗ {e.message}")
-        if e.suggestion:
-            print(f"  → {e.suggestion}")
-        sys.exit(e.code.value)
-
-
-@task
-def stop(c, force=False):
-    """Stop infrastructure.
-
-    Args:
-        c: Invoke context.
-        force: Force stop without graceful shutdown.
-    """
-    try:
-        # Load configuration
-        parser = ConfigurationParser()
-        config = parser.load()
-
-        # Get infrastructure ID
-        infra_id = config.get("INFRA_ID", Path.cwd().name)
-
-        # Check infrastructure state
-        state_manager = StateManager()
-        current_state = state_manager.get_state(infra_id)
-
-        if current_state == InfrastructureState.NOT_CREATED:
-            print(f"ℹ Infrastructure '{infra_id}' does not exist")
-            print("  → No action needed")
-            return
-
-        if current_state != InfrastructureState.RUNNING:
-            print(
-                f"ℹ Infrastructure '{infra_id}' is not running (state: {current_state.value})"
-            )
-            print("  → No action needed")
-            return
-
-        print(f"ℹ Stopping infrastructure '{infra_id}'")
-        if force:
-            print("  Force stop enabled")
-
-        # TODO: Implement infrastructure stop
-        print("ℹ Infrastructure stop not yet implemented")
-        print("  This is a placeholder for Phase 3 implementation")
-
-    except ConfigNotFoundError as e:
-        print(f"✗ {e.message}")
-        if e.suggestion:
-            print(f"  → {e.suggestion}")
-        sys.exit(ErrorCode.CONFIG_ERROR.value)
-    except VagrantpError as e:
-        print(f"✗ {e.message}")
-        if e.suggestion:
-            print(f"  → {e.suggestion}")
-        sys.exit(e.code.value)
-
-
-@task
-def rm(c, force=False):
-    """Remove infrastructure.
-
-    Args:
-        c: Invoke context.
-        force: Force removal without stopping first.
-    """
-    try:
-        # Load configuration
-        parser = ConfigurationParser()
-        config = parser.load()
-
-        # Get infrastructure ID
-        infra_id = config.get("INFRA_ID", Path.cwd().name)
-
-        # Check infrastructure state
-        state_manager = StateManager()
-        current_state = state_manager.get_state(infra_id)
-
-        if current_state == InfrastructureState.NOT_CREATED:
-            print(f"ℹ Infrastructure '{infra_id}' does not exist")
-            print("  → No action needed")
-            return
-
-        print(f"⚠ Warning: This will permanently remove infrastructure '{infra_id}'")
-
-        if not force:
-            # Confirmation prompt
-            response = input("→ Type 'yes' to confirm: ")
-            if response.lower() != "yes":
-                print("✗ Removal cancelled")
-                return
-
-        if current_state == InfrastructureState.RUNNING:
-            print("  Stopping infrastructure first...")
-            # TODO: Implement stop
-
-        print("  Cleaning up resources...")
-
-        # TODO: Implement infrastructure removal
-        print("ℹ Infrastructure removal not yet implemented")
-        print("  This is a placeholder for Phase 3 implementation")
+            print(f"✗ Unknown INFRA_TYPE: {infra_type}")
+            sys.exit(ErrorCode.CONFIG_ERROR.value)
 
     except ConfigNotFoundError as e:
         print(f"✗ {e.message}")
@@ -381,7 +258,7 @@ def rm(c, force=False):
 
 # Create collection of tasks
 ns = Collection()
-ns.configure({"tasks": [up, ssh, stop, rm]})
+ns.configure({"tasks": [show_version, up_task, ssh_task, stop_task, rm_task]})
 
 # Create program instance
 program = Program(namespace=ns, version="1.0.0")

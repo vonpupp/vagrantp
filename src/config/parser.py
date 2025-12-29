@@ -219,6 +219,40 @@ class ConfigurationParser:
         except ipaddress.AddressValueError:
             return False
 
+    def _check_port_conflicts(self, ports: List[Dict[str, int]]) -> List[int]:
+        """Check for port conflicts with running infrastructure.
+
+        Args:
+            ports: List of port mappings.
+
+        Returns:
+            List of conflicting port numbers.
+        """
+        conflicts = []
+
+        # Extract host ports (excluding auto-assigned)
+        host_ports = [p["host"] for p in ports if not p["auto"] and p["host"] > 0]
+
+        # TODO: Check against existing infrastructure instances
+        # This would require a global state registry or checking Vagrant/Podman state
+        # For now, we'll return empty list
+        # conflicts.extend([port for port in host_ports if self._is_port_in_use(port)])
+
+        return conflicts
+
+    def _is_port_in_use(self, port: int) -> bool:
+        """Check if a port is currently in use.
+
+        Args:
+            port: Port number to check.
+
+        Returns:
+            True if port is in use, False otherwise.
+        """
+        # TODO: Implement actual port checking
+        # This could use socket, subprocess to netstat/ss, or check infrastructure registry
+        return False
+
     def validate(self) -> ValidationResult:
         """Validate configuration values per data-model.md rules.
 
@@ -244,6 +278,14 @@ class ConfigurationParser:
             # Validate provider for VM
             if infra_type == "vm" and "PROVIDER" not in self.config:
                 errors.append("PROVIDER is required for VM infrastructure")
+
+            # Container-specific validation
+            if infra_type == "container":
+                # Containers don't require DISK_SIZE
+                if "DISK_SIZE" in self.config:
+                    warnings.append(
+                        "DISK_SIZE is not applicable for container infrastructure"
+                    )
 
         # Validate MEMORY
         if "MEMORY" in self.config:

@@ -91,21 +91,21 @@
 
 ### Implementation for User Story 2
 
-- [ ] T035 [P] [US2] Create container provider interface in src/podman/container_manager.py with methods: create(), connect(), stop(), remove()
-- [ ] T036 [P] [US2] Create Podman spec template in templates/container.erb for container generation
-- [ ] T037 [P] [US2] Create SSH connection handler in src/podman/container_manager.py for container SSH access
-- [ ] T038 [US2] Implement container creation logic in src/podman/container_manager.py create() using Podman CLI with resource limits and networking
-- [ ] T039 [US2] Implement container stop logic in src/podman/container_manager.py stop() with graceful and force modes
-- [ ] T040 [US2] Implement container removal logic in src/podman/container_manager.py remove() that cleans up container and associated volumes/networks
-- [ ] T041 [US2] Extend up CLI command in src/cli/main.py to detect INFRA_TYPE=container and delegate to container_manager
-- [ ] T042 [US2] Extend ssh CLI command in src/cli/main.py to support container SSH via container_manager
-- [ ] T043 [US2] Extend stop CLI command in src/cli/main.py to support container stop
-- [ ] T044 [US2] Extend rm CLI command in src/cli/main.py to support container removal
-- [ ] T045 [US2] Add container-specific validation in src/config/parser.py for container-only fields (MEMORY, CPUS without DISK_SIZE)
-- [ ] T046 [US2] Add idempotency check for containers in up CLI command
-- [ ] T047 [US2] Create integration test in tests/integration/test_container_lifecycle.py for full container lifecycle (up → ssh → stop → rm)
-- [ ] T048 [US2] Create unit tests in tests/unit/test_container_manager.py for container manager methods using mocked Podman CLI calls
-- [ ] T049 [US2] Create unit tests in tests/unit/test_config_parser.py for container-specific validation
+- [X] T035 [P] [US2] Create container provider interface in src/podman/container_manager.py with methods: create(), connect(), stop(), remove()
+- [X] T036 [P] [US2] Create Podman spec template in templates/container.erb for container generation
+- [X] T037 [P] [US2] Create SSH connection handler in src/podman/container_manager.py for container SSH access
+- [X] T038 [US2] Implement container creation logic in src/podman/container_manager.py create() using Podman CLI with resource limits and networking
+- [X] T039 [US2] Implement container stop logic in src/podman/container_manager.py stop() with graceful and force modes
+- [X] T040 [US2] Implement container removal logic in src/podman/container_manager.py remove() that cleans up container and associated volumes/networks
+- [X] T041 [US2] Extend up CLI command in src/cli/main.py to detect INFRA_TYPE=container and delegate to container_manager
+- [X] T042 [US2] Extend ssh CLI command in src/cli/main.py to support container SSH via container_manager
+- [X] T043 [US2] Extend stop CLI command in src/cli/main.py to support container stop
+- [X] T044 [US2] Extend rm CLI command in src/cli/main.py to support container removal
+- [X] T045 [US2] Add container-specific validation in src/config/parser.py for container-only fields (MEMORY, CPUS without DISK_SIZE)
+- [X] T046 [US2] Add idempotency check for containers in up CLI command
+- [X] T047 [US2] Create integration test in tests/integration/test_container_lifecycle.py for full container lifecycle (up → ssh → stop → rm)
+- [X] T048 [US2] Create unit tests in tests/unit/test_container_manager.py for container manager methods using mocked Podman CLI calls
+- [X] T049 [US2] Create unit tests in tests/unit/test_config_parser.py for container-specific validation
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 
@@ -119,26 +119,26 @@
 
 ### Implementation for User Story 3
 
-- [ ] T050 [P] [US3] Extend configuration parser in src/config/parser.py to parse MEMORY with unit parsing (G, M) and validate minimum 512MB
-- [ ] T051 [P] [US3] Extend configuration parser in src/config/parser.py to parse CPUS and validate minimum 1
-- [ ] T052 [P] [US3] Extend configuration parser in src/config/parser.py to parse DISK_SIZE with unit parsing (G, M) and validate minimum 5GB
-- [ ] T053 [P] [US3] Extend configuration parser in src/config/parser.py to parse NETWORK_MODE (bridge|default) and set defaults
-- [ ] T054 [P] [US3] Extend configuration parser in src/config/parser.py to parse IP_ADDRESS and validate IPv4 format if specified
-- [ ] T055 [P] [US3] Extend configuration parser in src/config/parser.py to parse PORTS as list of host:container mappings
-- [ ] T056 [US3] Extend VM manager in src/vagrant/vm_manager.py to apply MEMORY, CPUS, DISK_SIZE to Vagrantfile template
-- [ ] T057 [US3] Extend VM manager in src/vagrant/vm_manager.py to configure NETWORK_MODE (bridge|default) in Vagrantfile template
-- [ ] T058 [US3] Extend VM manager in src/vagrant/vm_manager.py to configure port forwarding from PORTS in Vagrantfile template
-- [ ] T059 [US3] Extend VM manager in src/vagrant/vm_manager.py to configure fixed IP from IP_ADDRESS in Vagrantfile template
-- [ ] T060 [US3] Extend container manager in src/podman/container_manager.py to apply MEMORY, CPUS to podman run CLI flags
-- [ ] T061 [US3] Extend container manager in src/podman/container_manager.py to configure NETWORK_MODE in podman network settings
-- [ ] T062 [US3] Extend container manager in src/podman/container_manager.py to configure port forwarding from PORTS in podman publish flags
-- [ ] T063 [US3] Add port conflict detection in src/config/parser.py to check if host ports are already in use
-- [ ] T064 [US3] Add network interface validation in src/vagrant/vm_manager.py to verify bridge exists for NETWORK_MODE=bridge
-- [ ] T065 [US3] Add error messages for resource configuration errors (invalid MEMORY format, port conflicts, missing bridge interface)
-- [ ] T066 [US3] Create unit tests in tests/unit/test_config_parser.py for resource parsing (MEMORY units, CPUS, DISK_SIZE units)
-- [ ] T067 [US3] Create unit tests in tests/unit/test_config_parser.py for networking configuration (NETWORK_MODE, IP_ADDRESS, PORTS)
-- [ ] T068 [US3] Create unit tests in tests/unit/test_vm_manager.py for resource application to Vagrantfile template
-- [ ] T069 [US3] Create unit tests in tests/unit/test_container_manager.py for resource application to Podman CLI flags
+- [X] T050 [P] [US3] Extend configuration parser in src/config/parser.py to parse MEMORY with unit parsing (G, M) and validate minimum 512MB
+- [X] T051 [P] [US3] Extend configuration parser in src/config/parser.py to parse CPUS and validate minimum 1
+- [X] T052 [P] [US3] Extend configuration parser in src/config/parser.py to parse DISK_SIZE with unit parsing (G, M) and validate minimum 5GB
+- [X] T053 [P] [US3] Extend configuration parser in src/config/parser.py to parse NETWORK_MODE (bridge|default) and set defaults
+- [X] T054 [P] [US3] Extend configuration parser in src/config/parser.py to parse IP_ADDRESS and validate IPv4 format if specified
+- [X] T055 [P] [US3] Extend configuration parser in src/config/parser.py to parse PORTS as list of host:container mappings
+- [X] T056 [US3] Extend VM manager in src/vagrant/vm_manager.py to apply MEMORY, CPUS, DISK_SIZE to Vagrantfile template
+- [X] T057 [US3] Extend VM manager in src/vagrant/vm_manager.py to configure NETWORK_MODE (bridge|default) in Vagrantfile template
+- [X] T058 [US3] Extend VM manager in src/vagrant/vm_manager.py to configure port forwarding from PORTS in Vagrantfile template
+- [X] T059 [US3] Extend VM manager in src/vagrant/vm_manager.py to configure fixed IP from IP_ADDRESS in Vagrantfile template
+- [X] T060 [US3] Extend container manager in src/podman/container_manager.py to apply MEMORY, CPUS to podman run CLI flags
+- [X] T061 [US3] Extend container manager in src/podman/container_manager.py to configure NETWORK_MODE in podman network settings
+- [X] T062 [US3] Extend container manager in src/podman/container_manager.py to configure port forwarding from PORTS in podman publish flags
+- [X] T063 [US3] Add port conflict detection in src/config/parser.py to check if host ports are already in use
+- [X] T064 [US3] Add network interface validation in src/vagrant/vm_manager.py to verify bridge exists for NETWORK_MODE=bridge
+- [X] T065 [US3] Add error messages for resource configuration errors (invalid MEMORY format, port conflicts, missing bridge interface)
+- [X] T066 [US3] Create unit tests in tests/unit/test_config_parser.py for resource parsing (MEMORY units, CPUS, DISK_SIZE units)
+- [X] T067 [US3] Create unit tests in tests/unit/test_config_parser.py for networking configuration (NETWORK_MODE, IP_ADDRESS, PORTS)
+- [X] T068 [US3] Create unit tests in tests/unit/test_vm_manager.py for resource application to Vagrantfile template
+- [X] T069 [US3] Create unit tests in tests/unit/test_container_manager.py for resource application to Podman CLI flags
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -198,9 +198,9 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T094 [P] Update README.md with quick start guide and configuration reference
-- [ ] T095 [P] Add command-line help text in src/cli/main.py for all commands (--help)
-- [ ] T096 [P] Add version command in src/cli/main.py (--version)
+- [X] T094 [P] Update README.md with quick start guide and configuration reference
+- [X] T095 [P] Add command-line help text in src/cli/main.py for all commands (--help)
+- [X] T096 [P] Add version command in src/cli/main.py (--version)
 - [ ] T097 Add signal handling for Ctrl+C in all CLI commands to gracefully cancel operations with cleanup
 - [ ] T098 Add logging infrastructure in src/utils/helpers.py with configurable log levels and output to file
 - [ ] T101 [P] Add network connectivity verification test in tests/integration/ that verifies IP reachability and port accessibility for both VMs and containers per Constitution L115
