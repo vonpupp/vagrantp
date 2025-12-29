@@ -238,7 +238,7 @@ A developer wants to ensure their .env configuration is valid before creating in
 - **FR-002**: System MUST support creating Podman container infrastructure from a .env configuration file in the current project directory
 - **FR-003**: System MUST allow users to configure infrastructure resources including RAM size, CPU count, disk size, and networking settings via .env file
 - **FR-004**: System MUST provide a wrapper command interface with subcommands: up, ssh, stop, and rm
-- **FR-005**: System MUST use the project directory name as the default identifier for infrastructure instances
+- **FR-005**: System MUST use the project directory name as the default identifier for infrastructure instances, with Vagrant's automatic hash/number suffixing handling naming conflicts
 - **FR-006**: System MUST use the project directory path as the default context for locating configuration files
 - **FR-007**: System MUST support automated provisioning script execution for infrastructure configuration after creation
 - **FR-008**: System MUST provide SSH access to created infrastructure via the wrapper ssh command
@@ -251,15 +251,26 @@ A developer wants to ensure their .env configuration is valid before creating in
 - **FR-015**: System MUST support port forwarding configuration for infrastructure
 - **FR-016**: System MUST provide idempotent infrastructure operations (running `$WRAPPER up` multiple times on the same project should not create duplicate infrastructure)
 - **FR-017**: System MUST support both bridge and default networking modes
-- **FR-018**: System MUST automatically assign a unique name to infrastructure if not specified in .env
+- **FR-018**: System MUST automatically assign a unique name to infrastructure if not specified in .env, leveraging Vagrant's built-in naming conflict resolution with hash/number suffixes
 - **FR-019**: System MUST allow users to specify custom provisioning scripts/playbooks via .env configuration
 - **FR-020**: System MUST provide clear status feedback for all wrapper operations
+- **FR-021**: System MUST measure and log performance metrics for all operations (creation time, connection time, stop time, remove time) for documentation purposes
+
+## Clarifications
+
+### Session 2025-12-29
+
+- Q: Configuration File Schema Definition → A: Simple flat key-value format (KEY=value) with required fields: INFRA_TYPE (vm|container), MEMORY (MB), CPUS (integer), DISK (GB). Optional: NETWORK_TYPE, PORTS, PROVISION_SCRIPT.
+- Q: Naming Conflict Resolution → A: Vagrant handles this automatically by adding hash/number suffix to VM names, preventing collisions.
+- Q: Scalability Limits and Resource Management → A: No limits - rely on host OS cgroup isolation and kernel resource management.
+- Q: Out-of-Scope Features → A: Exclude multi-host orchestration, GUI/visual management interface, automated scaling/auto-scaling infrastructure, infrastructure monitoring dashboards, advanced security features (RBAC, audit logging beyond basic access).
+- Q: Performance Metrics and Target Times → A: No specific targets - only measure and document actual times.
 
 ### Key Entities
 
 - **Project Directory**: A folder containing a configuration file that defines infrastructure requirements. The directory name serves as the default infrastructure identifier.
 - **Infrastructure Instance**: A running virtual machine or container created from a project directory's configuration. Each instance has unique resources, networking, and state.
-- **Configuration File**: A file in the project directory containing key-value pairs that specify infrastructure type, resources, networking, and provisioning settings.
+- **Configuration File (.env)**: A flat key-value format file (KEY=value) in the project directory containing infrastructure type, resources, networking, and provisioning settings. Required fields: `INFRA_TYPE` (vm|container), `MEMORY` (integer in MB), `CPUS` (integer), `DISK` (integer in GB). Optional fields: `NETWORK_TYPE` (bridge|default), `PORTS` (comma-separated port forwarding rules), `PROVISION_SCRIPT` (path to Ansible playbook or script), `FIXED_IP` (IP address string).
 - **Wrapper Command**: A command-line interface that provides up, ssh, stop, and rm subcommands for infrastructure management.
 - **Provisioning Script**: An automated configuration script specified in the configuration file that runs automatically after infrastructure creation to install and configure software.
 
@@ -267,7 +278,7 @@ A developer wants to ensure their .env configuration is valid before creating in
 
 ### Measurable Outcomes
 
-- **SC-001**: Users can create a new project with configured infrastructure in under 5 minutes (from creating configuration file to having a running VM/container)
+- **SC-001**: Users can create a new project with configured infrastructure efficiently (system will measure and document actual creation times without pre-defined targets)
 - **SC-002**: Users can switch between multiple projects and manage their infrastructure independently without conflicts
 - **SC-003**: 100% of infrastructure operations (up, ssh, stop, rm) complete successfully when using valid configurations
 - **SC-004**: System detects and reports 100% of configuration errors before attempting infrastructure creation
@@ -289,6 +300,21 @@ A developer wants to ensure their .env configuration is valid before creating in
 - SSH keys are set up for infrastructure access or passwords can be provided in configuration
 - The network bridge interface exists on the host system for bridge networking mode
 - Sufficient system resources (disk, RAM, CPU) are available for infrastructure creation
+- Host OS cgroups and kernel resource management will handle resource isolation and allocation between concurrent infrastructure instances
+- System will not enforce limits on concurrent projects or resource quotas, delegating resource contention management to the host OS
+
+## Out of Scope
+
+The following features are explicitly out of scope for this feature:
+
+- **Multi-host orchestration**: System operates on a single host system only. No clustering or distributed infrastructure management.
+- **GUI/visual management interface**: All interactions occur through command-line interface only.
+- **Automated scaling/auto-scaling**: System does not automatically scale infrastructure up or down based on load or metrics.
+- **Infrastructure monitoring dashboards**: No built-in monitoring, metrics visualization, or dashboards provided.
+- **Advanced security features**: No role-based access control (RBAC), audit logging, or fine-grained authorization beyond basic SSH access.
+- **Cloud provider integration**: No support for provisioning infrastructure on AWS, GCP, Azure, or other cloud platforms.
+- **Infrastructure backup/restore**: No automated backup or disaster recovery functionality.
+- **High availability clustering**: No support for active-active or active-passive configurations across multiple hosts.
 
 ## Dependencies
 
