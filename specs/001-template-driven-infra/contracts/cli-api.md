@@ -42,6 +42,7 @@ vagrantp <command> [options]
 **Response Schema**:
 
 **Success Response (200)**:
+
 ```json
 {
   "success": true,
@@ -88,6 +89,7 @@ vagrantp <command> [options]
 **Error Responses**:
 
 **400 Bad Request - Invalid Configuration**:
+
 ```json
 {
   "error": {
@@ -102,6 +104,7 @@ vagrantp <command> [options]
 ```
 
 **409 Conflict - Infrastructure Already Exists**:
+
 ```json
 {
   "error": {
@@ -114,6 +117,7 @@ vagrantp <command> [options]
 ```
 
 **503 Service Unavailable - Insufficient Resources**:
+
 ```json
 {
   "error": {
@@ -171,6 +175,7 @@ Next steps:
 **Response Schema**:
 
 **Success Response (200)**:
+
 ```json
 {
   "success": true,
@@ -187,6 +192,7 @@ Next steps:
 **Error Responses**:
 
 **404 Not Found - Infrastructure Not Running**:
+
 ```json
 {
   "error": {
@@ -199,6 +205,7 @@ Next steps:
 ```
 
 **503 Service Unavailable - SSH Connection Failed**:
+
 ```json
 {
   "error": {
@@ -260,6 +267,7 @@ PRETTY_NAME="Arch Linux"
 **Response Schema**:
 
 **Success Response (200)**:
+
 ```json
 {
   "success": true,
@@ -274,6 +282,7 @@ PRETTY_NAME="Arch Linux"
 **Error Responses**:
 
 **404 Not Found - Infrastructure Not Found**:
+
 ```json
 {
   "error": {
@@ -286,6 +295,7 @@ PRETTY_NAME="Arch Linux"
 ```
 
 **409 Conflict - Infrastructure Already Stopped**:
+
 ```json
 {
   "error": {
@@ -340,6 +350,7 @@ $ vagrantp stop --force
 **Response Schema**:
 
 **Success Response (200)**:
+
 ```json
 {
   "success": true,
@@ -359,6 +370,7 @@ $ vagrantp stop --force
 **Error Responses**:
 
 **404 Not Found - Infrastructure Not Found**:
+
 ```json
 {
   "error": {
@@ -371,6 +383,7 @@ $ vagrantp stop --force
 ```
 
 **409 Conflict - Infrastructure Still Running**:
+
 ```json
 {
   "error": {

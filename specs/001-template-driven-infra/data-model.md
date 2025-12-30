@@ -26,13 +26,16 @@ This document defines the core data entities for the template-driven infrastruct
 | `infrastructure_id` | string | No | Custom infrastructure identifier (optional) | Defaults to `name` if not specified |
 
 **Relationships**:
+
 - `has_one` Configuration File
 - `has_many` Infrastructure Instances (one per infra_type)
 
 **State Transitions**:
+
 - N/A (project directories are static, managed by user)
 
 **Validation Rules**:
+
 - Path must be absolute
 - Directory must be readable
 - Configuration file must exist and be valid YAML/.env format
@@ -74,6 +77,7 @@ not_created ──(up)──> creating ──(boot_complete)──> running
 ```
 
 **State Transitions**:
+
 - `not_created` → `creating`: When `up` command is executed
 - `creating` → `running`: When infrastructure boots successfully
 - `running` → `stopped`: When `stop` command is executed
@@ -83,6 +87,7 @@ not_created ──(up)──> creating ──(boot_complete)──> running
 - `removing` → `not_created`: When cleanup completes
 
 **Validation Rules**:
+
 - `id` must be unique across all instances on host
 - `infra_type` and `provider` must be compatible (VM providers for vm, podman for container)
 - `resources` must not exceed host system limits
@@ -90,6 +95,7 @@ not_created ──(up)──> creating ──(boot_complete)──> running
 - State transitions must follow state machine rules
 
 **Operations**:
+
 - `create()`: Create infrastructure (up command)
 - `connect()`: Establish SSH connection (ssh command)
 - `stop()`: Stop infrastructure gracefully (stop command)
@@ -147,6 +153,7 @@ SSH_KEY=/home/av/.ssh/id_rsa
 ```
 
 **Validation Rules**:
+
 - `INFRA_TYPE` is required
 - If `INFRA_TYPE=vm`, `PROVIDER` is required
 - `MEMORY` must be ≥ 512MB
@@ -158,44 +165,49 @@ SSH_KEY=/home/av/.ssh/id_rsa
 - `SSH_KEY` must exist if specified
 
 **Data Validation**:
+
 ```python
 def validate_config(config: dict) -> ValidationResult:
     # Check required fields
-    if 'INFRA_TYPE' not in config:
+    if "INFRA_TYPE" not in config:
         raise ValidationError("INFRA_TYPE is required")
 
     # Validate INFRA_TYPE
-    if config['INFRA_TYPE'] not in ['vm', 'container']:
+    if config["INFRA_TYPE"] not in ["vm", "container"]:
         raise ValidationError("INFRA_TYPE must be 'vm' or 'container'")
 
     # Validate provider for VM
-    if config['INFRA_TYPE'] == 'vm' and 'PROVIDER' not in config:
+    if config["INFRA_TYPE"] == "vm" and "PROVIDER" not in config:
         raise ValidationError("PROVIDER is required for VM infrastructure")
 
     # Validate resource constraints
-    memory = parse_memory(config.get('MEMORY', '2048'))
+    memory = parse_memory(config.get("MEMORY", "2048"))
     if memory < 512:
         raise ValidationError("MEMORY must be at least 512MB")
 
-    cpus = int(config.get('CPUS', '2'))
+    cpus = int(config.get("CPUS", "2"))
     if cpus < 1:
         raise ValidationError("CPUS must be at least 1")
 
     # Validate networking
-    if 'IP_ADDRESS' in config:
-        if not is_valid_ipv4(config['IP_ADDRESS']):
+    if "IP_ADDRESS" in config:
+        if not is_valid_ipv4(config["IP_ADDRESS"]):
             raise ValidationError("Invalid IP_ADDRESS format")
 
     # Validate port conflicts
-    if 'PORTS' in config:
-        for port_mapping in parse_ports(config['PORTS']):
+    if "PORTS" in config:
+        for port_mapping in parse_ports(config["PORTS"]):
             if port_conflicts(port_mapping):
-                raise ValidationError(f"Port {port_mapping.host_port} is already in use")
+                raise ValidationError(
+                    f"Port {port_mapping.host_port} is already in use"
+                )
 
     # Validate provisioning
-    if 'PROVISIONING_PLAYBOOK' in config:
-        if not os.path.exists(config['PROVISIONING_PLAYBOOK']):
-            raise ValidationError(f"PROVISIONING_PLAYBOOK does not exist: {config['PROVISIONING_PLAYBOOK']}")
+    if "PROVISIONING_PLAYBOOK" in config:
+        if not os.path.exists(config["PROVISIONING_PLAYBOOK"]):
+            raise ValidationError(
+                f"PROVISIONING_PLAYBOOK does not exist: {config['PROVISIONING_PLAYBOOK']}"
+            )
 
     return ValidationResult(valid=True)
 ```
@@ -232,6 +244,7 @@ vagrantp rm [--force]
 ```
 
 **Error Handling**:
+
 - Missing .env file: Clear error with instructions to create configuration
 - Invalid configuration: Show specific validation errors with line numbers
 - Infrastructure already exists: Show current state, suggest `vagrantp ssh` or `vagrantp stop`
@@ -241,6 +254,7 @@ vagrantp rm [--force]
 - SSH connection failed: Show possible causes and troubleshooting steps
 
 **Exit Codes**:
+
 - `0`: Success
 - `1`: General error
 - `2`: Configuration error
@@ -251,6 +265,7 @@ vagrantp rm [--force]
 - `7`: Provisioning failed
 
 **User Feedback**:
+
 - Print initial status message in < 100ms
 - Show progress for operations > 10 seconds
 - Display step-by-step progress for multi-stage operations
@@ -276,6 +291,7 @@ vagrantp rm [--force]
 | `dry_run` | boolean | No | Run in dry-run mode | Default: `false` |
 
 **Supported Types**:
+
 - **Ansible Playbook**: Primary provisioning method (constitution requirement)
   - Must be idempotent
   - Must support dry-run mode
@@ -283,6 +299,7 @@ vagrantp rm [--force]
   - Secrets must use environment variables (never hardcoded)
 
 **Execution Flow**:
+
 1. Infrastructure boots successfully
 2. Verify SSH connection is established
 3. Execute provisioning script
@@ -299,6 +316,7 @@ PROVISIONING_VARS=./playbooks/vars.yml
 ```
 
 **Validation Rules**:
+
 - Playbook must exist
 - Playbook must be valid YAML
 - Playbook must be idempotent (testable)
@@ -322,6 +340,7 @@ PROVISIONING_VARS=./playbooks/vars.yml
 | `disk_gb` | integer | Yes | Disk size in GB | ≥ 5 |
 
 **Validation**:
+
 - Must not exceed host system limits
 - Must be compatible with provider constraints
 
@@ -343,14 +362,15 @@ PROVISIONING_VARS=./playbooks/vars.yml
 
 ```python
 {
-    "host_port": int,          # Port on host (0 for auto)
-    "container_port": int,     # Port in infrastructure
-    "protocol": str,           # "tcp" or "udp"
-    "auto": bool               # True if host_port should be auto-assigned
+    "host_port": int,  # Port on host (0 for auto)
+    "container_port": int,  # Port in infrastructure
+    "protocol": str,  # "tcp" or "udp"
+    "auto": bool,  # True if host_port should be auto-assigned
 }
 ```
 
 **Validation**:
+
 - Must be compatible with provider
 - No port conflicts across instances
 - IP address must be in valid range for network mode
@@ -412,7 +432,7 @@ Infrastructure Instance ───> Provisioning Script
 
 ## Data Flow
 
-### `up` Command Flow:
+### `up` Command Flow
 
 1. **User executes**: `vagrantp up`
 2. **Read .env**: Parse configuration file from current directory
@@ -424,7 +444,7 @@ Infrastructure Instance ───> Provisioning Script
 8. **Run provisioning**: Execute Ansible playbook if specified
 9. **Report status**: Display completion message and next steps
 
-### `ssh` Command Flow:
+### `ssh` Command Flow
 
 1. **User executes**: `vagrantp ssh`
 2. **Read .env**: Parse configuration file
@@ -433,7 +453,7 @@ Infrastructure Instance ───> Provisioning Script
 5. **Establish SSH connection**: Use subprocess to invoke SSH client
 6. **Hand over control**: Attach user terminal to SSH session
 
-### `stop` Command Flow:
+### `stop` Command Flow
 
 1. **User executes**: `vagrantp stop`
 2. **Read .env**: Parse configuration file
@@ -442,7 +462,7 @@ Infrastructure Instance ───> Provisioning Script
 5. **Wait for shutdown**: Monitor shutdown progress
 6. **Report status**: Display completion message
 
-### `rm` Command Flow:
+### `rm` Command Flow
 
 1. **User executes**: `vagrantp rm [--force]`
 2. **Read .env**: Parse configuration file
@@ -456,7 +476,7 @@ Infrastructure Instance ───> Provisioning Script
 
 ## Error Handling
 
-### Error Categories:
+### Error Categories
 
 1. **Configuration Errors**:
    - Missing .env file
@@ -485,7 +505,7 @@ Infrastructure Instance ───> Provisioning Script
    - Invalid state transition
    - Concurrent modification
 
-### Error Response Format:
+### Error Response Format
 
 ```json
 {
@@ -498,7 +518,7 @@ Infrastructure Instance ───> Provisioning Script
 }
 ```
 
-### Error Codes Mapping:
+### Error Codes Mapping
 
 | Error Code | Exit Code | Example Message |
 |------------|-----------|-----------------|

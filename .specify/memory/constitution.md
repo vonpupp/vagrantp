@@ -121,6 +121,7 @@ Infrastructure MUST support Podman containers. Containers MUST integrate with VM
 ### Amendment Procedure
 
 Constitution amendments require:
+
 1. Documented rationale for change
 2. Impact analysis on existing templates
 3. Migration plan for affected projects
@@ -129,6 +130,7 @@ Constitution amendments require:
 ### Versioning Policy
 
 Constitution follows semantic versioning (MAJOR.MINOR.PATCH):
+
 - **MAJOR**: Backward incompatible principle removals or redefinitions
 - **MINOR**: New principle/section added or materially expanded guidance
 - **PATCH**: Clarifications, wording, typo fixes, non-semantic refinements
@@ -136,6 +138,7 @@ Constitution follows semantic versioning (MAJOR.MINOR.PATCH):
 ### Compliance Review
 
 All PRs MUST verify constitutional compliance:
+
 - Template-driven architecture MUST be maintained
 - Network flexibility MUST be preserved
 - Ansible provisioning MUST be used

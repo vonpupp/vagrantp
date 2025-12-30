@@ -8,56 +8,69 @@
 I have manually created the VM and provisioned like this:
 
 ** SSH into the server
-#+BEGIN_SRC sh
+
+# +BEGIN_SRC sh
+
 ssh $server
-#+END_SRC
+
+# +END_SRC
 
 ** Create the cloud-init config
-#+BEGIN_SRC sh :var PROJECT=/home/av/repos/haevas-n8n-infra/cloud-init-test/arch :session hs1ai :results raw drawer
+
+# +BEGIN_SRC sh :var PROJECT=/home/av/repos/haevas-n8n-infra/cloud-init-test/arch :session hs1ai :results raw drawer
+
 $ cat <<EOF > $PROJECT/user-config
-#cloud-config
+
+# cloud-config
+
 hostname: base
 manage_etc_hosts: true
 
 users:
-  - default
-  - name: root
+
+- default
+- name: root
     lock_passwd: false
     ssh_authorized_keys:
-      - ssh-rsa AAAA...
-  - name: av
+  - ssh-rsa AAAA...
+- name: av
     lock_passwd: false
     plain_text_passwd: changeme
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: wheel
     ssh_authorized_keys:
-      - ssh-rsa AAAA...
+  - ssh-rsa AAAA...
 
 ssh_pwauth: true
 disable_root: false
 
 packages:
-  - ansible
-  - emacs
-  - git
-  - networkmanager
-  - openssh
-  - python
-  - rsync
-  - sudo
-  - tmux
-  - vim
+
+- ansible
+- emacs
+- git
+- networkmanager
+- openssh
+- python
+- rsync
+- sudo
+- tmux
+- vim
 
 runcmd:
-  - systemctl enable --now sshd
-  - systemctl enable --now NetworkManager
-  - btrfs filesystem resize max /
+
+- systemctl enable --now sshd
+- systemctl enable --now NetworkManager
+- btrfs filesystem resize max /
 EOF
-#+END_SRC
+
+# +END_SRC
 
 Create the image
-#+BEGIN_SRC sh :results raw drawer
+
+# +BEGIN_SRC sh :results raw drawer
+
 xorriso -as genisoimage \
   -output cloud-init.iso \
   -volid CIDATA \
@@ -65,33 +78,43 @@ xorriso -as genisoimage \
   cloud-init/user-data cloud-init/meta-data
 sudo mv cloud-init.iso /var/lib/libvirt/images/
 sudo chown libvirt-qemu:libvirt-qemu /var/lib/libvirt/images/cloud-init.iso
-#+END_SRC
+
+# +END_SRC
 
 ** Create the VM
 Download the image
-#+BEGIN_SRC sh :dir /hs1:/etc :results raw drawer
+
+# +BEGIN_SRC sh :dir /hs1:/etc :results raw drawer
+
 cd /var/lib/libvirt/images
-sudo curl -LO https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso
-#+END_SRC
+sudo curl -LO <https://geo.mirror.pkgbuild.com/iso/latest/archlinux-x86_64.iso>
+
+# +END_SRC
 
 If you need to delete the VM (and disk):
-#+BEGIN_SRC sh :dir /hs1:/etc :results raw drawer
+
+# +BEGIN_SRC sh :dir /hs1:/etc :results raw drawer
+
 sudo virsh destroy code01 2>/dev/null || true
 sudo virsh undefine code01 --remove-all-storage
-#+END_SRC
+
+# +END_SRC
 
 Create the disk
-#+BEGIN_SRC sh :dir /hs1:/etc :results raw drawer
+
+# +BEGIN_SRC sh :dir /hs1:/etc :results raw drawer
+
 sudo qemu-img create \
   -f qcow2 \
   -F qcow2 \
   -b /var/lib/libvirt/images/Arch-Linux-x86_64-cloudimg.qcow2 \
   /var/lib/libvirt/images/code01.qcow2
 sudo qemu-img resize /var/lib/libvirt/images/code01.qcow2 20G
-#+END_SRC
 
+# +END_SRC
 
-#+BEGIN_SRC sh :dir /hs1:/etc :results raw drawer
+# +BEGIN_SRC sh :dir /hs1:/etc :results raw drawer
+
 sudo virt-install \
   --name code01 \
   --memory 8192 \
@@ -106,7 +129,8 @@ sudo virt-install \
   --console pty,target_type=serial \
   --noautoconsole
 sudo virsh autostart code01
-#+END_SRC
+
+# +END_SRC
 
 The goal of this project is be able to replicate a similar architecture but with some extra features.
 
@@ -123,6 +147,7 @@ total 0
 All the projects reside in this main folder.
 
 The goal is that when I cd into a folder, I can have the configuration of the VM in a .env file, type of infra (VM or container), RAM size, number of processors, port forwarding, etc. Then on that project directory I can use vagrant with some extra scripts/wrappers so I can use this CLI API:
+
 - $WRAPPER up
 - $WRAPPER ssh
 - $WRAPPER stop
