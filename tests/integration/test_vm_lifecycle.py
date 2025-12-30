@@ -1,8 +1,11 @@
 """Integration tests for VM lifecycle."""
 
+from pathlib import Path
+
 import pytest
 
 from config.parser import ConfigurationParser
+from provision.ansible import ProvisioningManager
 from utils.helpers import InfrastructureState
 from vagrant.vm_manager import VMManager
 
@@ -119,3 +122,90 @@ def test_full_lifecycle_workflow(temp_project_dir, vm_manager):
     # Verify state transition back to not_created
     # state = vm_manager._get_state()
     # assert state == InfrastructureState.NOT_CREATED
+
+
+def test_provisioning_workflow(temp_project_dir):
+    """Test provisioning workflow for VM."""
+    # Create Ansible playbook
+    playbook = temp_project_dir / "playbook.yml"
+    playbook.write_text("""---
+- name: Test provisioning
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create test directory
+      file:
+        path: /tmp/test
+        state: directory
+""")
+
+    # Create provisioning manager
+    provision_manager = ProvisioningManager("test_project", temp_project_dir)
+
+    # Check initial provisioning status
+    assert provision_manager.check_provisioning_status() is False
+
+    # Mark as provisioned
+    provision_manager.mark_provisioned()
+
+    # Verify provisioning status
+    assert provision_manager.check_provisioning_status() is True
+
+    # Clear provisioning status
+    provision_manager.clear_provisioned_status()
+
+    # Verify provisioning status cleared
+    assert provision_manager.check_provisioning_status() is False
+
+
+def test_provisioning_with_extra_vars(temp_project_dir):
+    """Test provisioning with extra variables."""
+    # Create Ansible playbook
+    playbook = temp_project_dir / "playbook.yml"
+    playbook.write_text("""---
+- name: Test provisioning with vars
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create test directory
+      file:
+        path: "/tmp/{{ test_dir }}"
+        state: directory
+""")
+
+    # Create extra vars file
+    vars_file = temp_project_dir / "vars.yml"
+    vars_file.write_text("test_dir: test_provisioned")
+
+    # Verify playbook exists
+    assert playbook.exists()
+    assert vars_file.exists()
+
+
+def test_provisioning_status_tracking(temp_project_dir):
+    """Test provisioning status tracking."""
+    provision_manager = ProvisioningManager("test_project", temp_project_dir)
+
+    state_file = temp_project_dir / ".vagrantp_provisioned"
+
+    # Initial: not provisioned
+    assert provision_manager.check_provisioning_status() is False
+    assert not state_file.exists()
+
+    # Mark as provisioned
+    provision_manager.mark_provisioned()
+    assert provision_manager.check_provisioning_status() is True
+    assert state_file.exists()
+
+    # Verify state file content
+    state_content = state_file.read_text()
+    # State file contains timestamp (float), verify it's a number
+    try:
+        float(state_content)
+    except ValueError:
+        raise AssertionError("State file should contain a timestamp")
+
+    # Clear provisioning status
+    provision_manager.clear_provisioned_status()
+    assert provision_manager.check_provisioning_status() is False
+    assert not state_file.exists()

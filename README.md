@@ -26,7 +26,7 @@ pip install -e .
 - Python 3.11+
 - Vagrant 2.3+ (for VMs)
 - VirtualBox or libvirt (for VMs)
-- Podman 3.0+ (for containers)
+- Podman 3.0+ or Docker 20.0+ (for containers)
 - Ansible 2.9+ (for provisioning, optional)
 
 ## Development
@@ -214,6 +214,10 @@ Show version information.
 | `PORTS` | Port forwarding rules (`host:container`) | `[]` | `8080:80,auto:443` |
 | `IMAGE` | Container image - containers only | `alpine:latest` | `nginx:latest` |
 | `PROVISIONING_PLAYBOOK` | Ansible playbook path | N/A | `./playbooks/site.yml` |
+| `PROVISIONING_VARS` | Ansible variables file path | N/A | `./playbooks/vars.yml` |
+| `PROVISIONING_AUTO_INSTALL_ANSIBLE` | Auto-install Ansible in container | `false` | `true` |
+| `SSH_USER` | SSH username for VM provisioning | `root` | `ubuntu` |
+| `SSH_KEY` | SSH key path for VM provisioning | Vagrant default | `~/.ssh/id_rsa` |
 
 ## Resource Units
 
@@ -239,3 +243,147 @@ PORTS=8080:80,8081:443,auto:8082
 
 - **default**: Use default NAT/networking
 - **bridge**: Use bridged networking for direct network access
+
+## Provisioning
+
+Vagrantp supports Ansible-based provisioning for both VMs and containers.
+
+### How It Works
+
+**For VMs:**
+
+- Uses SSH connection to run Ansible playbooks
+- Works with libvirt, VirtualBox, and any Vagrant provider
+- Ansible can run on host machine or inside VM
+
+**For Containers (Podman/Docker):**
+
+- Runs Ansible playbooks inside the container via `podman exec` or `docker exec`
+- Supports both Podman and Docker runtimes
+- Auto-detects available runtime
+
+**Output Format:**
+
+- Built-in tool playbooks (bootstrap, base roles) show formatted summary output
+- User-specified playbooks show raw Ansible output for easier debugging
+
+### Auto-Installing Ansible
+
+If your container image doesn't have Ansible pre-installed, you can use the auto-install feature:
+
+```env
+INFRA_TYPE=container
+IMAGE=archlinux
+PROVISIONING_PLAYBOOK=playbooks/site.yml
+PROVISIONING_AUTO_INSTALL_ANSIBLE=true
+```
+
+When enabled, Vagrantp will:
+
+1. Check if Ansible is installed in the container
+2. If missing, run the bootstrap playbook (`ansible/bootstrap.yml`)
+3. The bootstrap playbook detects the OS and installs Ansible appropriately:
+   - **Debian/Ubuntu**: Installs via pip
+   - **Arch Linux**: Installs via pacman
+   - **RHEL/CentOS/Fedora**: Installs via yum/dnf
+   - **Alpine**: Installs via pip
+4. Then runs your main playbook
+
+### Using Custom Bootstrap Playbook
+
+You can provide your own bootstrap playbook by creating `<playbook-dir>/bootstrap.yml`:
+
+```yaml
+---
+- name: Custom Bootstrap
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Ansible
+      apt:
+        name: ansible
+        state: present
+```
+
+### Provisioning Options
+
+| Option | Description |
+|--------|-------------|
+| `--no-provision` | Skip provisioning step entirely |
+| `PROVISIONING_AUTO_INSTALL_ANSIBLE=true` | Auto-install Ansible in containers if missing |
+
+### Example: Full Workflow with Provisioning
+
+1. **Create .env with provisioning:**
+
+   ```env
+   INFRA_TYPE=container
+   IMAGE=archlinux
+   PROVISIONING_PLAYBOOK=playbooks/site.yml
+   PROVISIONING_AUTO_INSTALL_ANSIBLE=true
+   ```
+
+2. **Create your playbook:**
+
+   ```yaml
+   # playbooks/site.yml
+   ---
+   - name: Configure infrastructure
+     hosts: all
+     become: yes
+     tasks:
+       - name: Install packages
+         package:
+           name:
+             - git
+             - vim
+             - tmux
+           state: present
+   ```
+
+3. **Run vagrantp up:**
+
+   ```bash
+   vagrantp up
+   ```
+
+    Output:
+
+    ```
+    ✓ Configuration validated
+    → Starting infrastructure...
+      INFRA_TYPE: container
+      IMAGE: archlinux
+    → Running Ansible provisioning...
+
+    PLAY [Configure infrastructure] ************************************************
+
+    TASK [Gathering Facts] *********************************************************
+    ok: [default]
+
+    TASK [Install packages] ********************************************************
+    changed: [default] => (item=['git', 'vim', 'tmux'])
+
+    PLAY RECAP *********************************************************************
+    default: ok=2 changed=1 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0
+
+    ✓ Provisioning completed (15.2s)
+    ```
+
+### Skipping Reprovisioning
+
+Vagrantp tracks provisioning state to avoid running playbooks multiple times:
+
+```bash
+vagrantp up  # First time: runs playbook
+vagrantp up  # Second time: skips (already provisioned)
+vagrantp rm   # Clears state
+vagrantp up  # Re-runs playbook
+```
+
+To force re-provisioning, remove and recreate infrastructure:
+
+```bash
+vagrantp rm
+vagrantp up
+```

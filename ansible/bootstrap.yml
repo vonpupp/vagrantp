@@ -1,0 +1,82 @@
+---
+# Bootstrap Ansible - Auto-installs Ansible if missing
+# This playbook is used when PROVISIONING_AUTO_INSTALL_ANSIBLE=true
+# It detects the OS family and installs Ansible appropriately
+
+- name: Bootstrap Ansible
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Check if Ansible is installed
+      command: which ansible
+      register: ansible_check
+      failed_when: false
+      changed_when: false
+
+    - name: Install Ansible on Debian/Ubuntu
+      when: ansible_check.rc != 0 and ansible_os_family == "Debian"
+      block:
+        - name: Update package cache
+          apt:
+            update_cache: true
+            cache_valid_time: 3600
+
+        - name: Install Python pip
+          apt:
+            name: python3-pip
+            state: present
+
+        - name: Install Ansible via pip
+          pip:
+            name: ansible
+            state: present
+            executable: pip3
+
+    - name: Install Ansible on Arch Linux
+      when: ansible_check.rc != 0 and ansible_os_family == "Archlinux"
+      block:
+        - name: Update package cache
+          pacman:
+            update_cache: true
+
+        - name: Install Ansible
+          pacman:
+            name: ansible
+            state: present
+
+    - name: Install Ansible on RHEL/CentOS/Fedora
+      when: ansible_check.rc != 0 and ansible_os_family == "RedHat"
+      block:
+        - name: Enable EPEL repository (RHEL/CentOS)
+          yum:
+            name: epel-release
+            state: present
+          when: ansible_distribution not in ["Fedora"]
+
+        - name: Install Ansible via dnf (Fedora) or yum (RHEL/CentOS)
+          package:
+            name: ansible
+            state: present
+
+    - name: Install Ansible on Alpine
+      when: ansible_check.rc != 0 and ansible_os_family == "Alpine"
+      block:
+        - name: Install Python and pip
+          apk:
+            name:
+              - python3
+              - py3-pip
+            state: present
+
+        - name: Install Ansible via pip
+          pip:
+            name: ansible
+            state: present
+            executable: pip3
+
+    - name: Verify Ansible installation
+      command: ansible --version
+      register: ansible_version
+      changed_when: false
