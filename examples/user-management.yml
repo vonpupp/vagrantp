@@ -1,0 +1,54 @@
+---
+# User management example: Create users and configure SSH
+# Usage: cp examples/user-management.yml playbooks/site.yml
+# Optional: cp examples/user-management-vars.yml playbooks/vars.yml
+
+- name: Configure users
+  hosts: all
+  become: yes
+  gather_facts: false
+
+  tasks:
+    - name: Create user accounts
+      user:
+        name: "{{ item.name }}"
+        shell: "{{ item.shell | default('/bin/bash') }}"
+        groups: "{{ item.groups | default([]) }}"
+        state: present
+      loop: "{{ users }}"
+      when: users is defined
+
+    - name: Create .ssh directory for users
+      file:
+        path: "/home/{{ item.name }}/.ssh"
+        state: directory
+        owner: "{{ item.name }}"
+        group: "{{ item.name }}"
+        mode: "0700"
+      loop: "{{ users }}"
+      when:
+        - users is defined
+        - item.ssh_key is defined
+
+    - name: Add SSH keys
+      copy:
+        content: "{{ item.ssh_key }}"
+        dest: "/home/{{ item.name }}/.ssh/authorized_keys"
+        owner: "{{ item.name }}"
+        group: "{{ item.name }}"
+        mode: "0600"
+      loop: "{{ users }}"
+      when:
+        - users is defined
+        - item.ssh_key is defined
+
+    - name: Add users to sudoers (optional)
+      copy:
+        content: "{{ item.name }} ALL=(ALL) NOPASSWD:ALL\n"
+        dest: "/etc/sudoers.d/{{ item.name }}"
+        mode: "0440"
+        validate: "visudo -cf %s"
+      loop: "{{ users }}"
+      when:
+        - users is defined
+        - item.sudo | default(false)

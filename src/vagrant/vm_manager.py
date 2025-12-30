@@ -58,6 +58,41 @@ class VMManager:
 
         return InfrastructureState.NOT_CREATED
 
+    def _get_ssh_host(self) -> str:
+        """Get SSH host (IP address) of VM.
+
+        Returns:
+            SSH host IP address.
+
+        Raises:
+            VagrantpError: If VM is not running or SSH host cannot be determined.
+        """
+        state = self._get_state()
+        if state != InfrastructureState.RUNNING:
+            raise VagrantpError(
+                f"VM '{self.infra_id}' is not running (state: {state.value})",
+                ErrorCode.GENERAL_ERROR,
+            )
+
+        try:
+            result = run_command(
+                ["vagrant", "ssh-config"],
+                cwd=self.project_dir,
+                check=True,
+            )
+
+            stdout = result.stdout if result.stdout else ""
+            for line in stdout.split("\n"):
+                if line.strip().startswith("HostName"):
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        return parts[1].strip()
+
+            raise VagrantpError("Could not determine SSH host from vagrant ssh-config")
+
+        except subprocess.CalledProcessError as e:
+            raise VagrantpError(f"Failed to get SSH host: {e}")
+
     def create(self, config: dict[str, Any]) -> None:
         """Create VM from configuration.
 

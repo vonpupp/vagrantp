@@ -1,0 +1,50 @@
+---
+# Simple example: Install and configure Nginx
+# Usage: cp examples/simple-service.yml playbooks/site.yml
+
+- name: Configure web server
+  hosts: all
+  become: yes
+  gather_facts: true
+
+  tasks:
+    - name: Update package cache (Debian/Ubuntu)
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Update package cache (Arch Linux)
+      pacman:
+        update_cache: true
+      when: ansible_os_family == "Archlinux"
+
+    - name: Install Nginx
+      package:
+        name: nginx
+        state: present
+
+    - name: Start Nginx service
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: Create web directory
+      file:
+        path: /var/www/html
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: "0755"
+
+    - name: Create index page
+      copy:
+        content: |
+          <html>
+          <body>
+          <h1>Provisioned by Vagrantp</h1>
+          </body>
+          </html>
+        dest: /var/www/html/index.html
+        mode: "0644"

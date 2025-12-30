@@ -15,6 +15,7 @@ Vagrantp is a template-driven infrastructure tool that allows you to create and 
 ### Required Software
 
 1. **Python 3.11+**: Install from your distribution's package manager
+
    ```bash
    # Arch Linux
    sudo pacman -S python
@@ -24,6 +25,7 @@ Vagrantp is a template-driven infrastructure tool that allows you to create and 
    ```
 
 2. **Vagrant**: Required for VM infrastructure
+
    ```bash
    # Arch Linux
    sudo pacman -S vagrant
@@ -37,6 +39,7 @@ Vagrantp is a template-driven infrastructure tool that allows you to create and 
    - **libvirt** (recommended): `sudo pacman -S libvirt qemu vagrant-libvirt`
 
 4. **Podman**: Required for container infrastructure
+
    ```bash
    # Arch Linux
    sudo pacman -S podman
@@ -46,6 +49,7 @@ Vagrantp is a template-driven infrastructure tool that allows you to create and 
    ```
 
 5. **Ansible**: Required for provisioning
+
    ```bash
    sudo pacman -S ansible
    ```
@@ -260,7 +264,7 @@ Create `playbooks/site.yml`:
 
 ### Step 2: Update .env File
 
-Add the provisioning playbook:
+Add the provisioning playbook (and optional variables file):
 
 ```env
 INFRA_TYPE=vm
@@ -270,7 +274,11 @@ CPUS=2
 
 # Enable provisioning
 PROVISIONING_PLAYBOOK=./playbooks/site.yml
+# Optional: variables file
+PROVISIONING_VARS=./playbooks/vars.yml
 ```
+
+**Note**: Vagrantp includes a default playbook at `ansible/site.yml` that installs base packages. Use it directly or copy it as a template.
 
 ### Step 3: Start Infrastructure
 
@@ -412,6 +420,7 @@ vagrantp rm --force
 **Error**: `Provider 'libvirt' is not installed or not configured`
 
 **Solution**: Install the provider:
+
 ```bash
 # Arch Linux
 sudo pacman -S libvirt qemu vagrant-libvirt
@@ -429,6 +438,7 @@ sudo usermod -a -G libvirt $(whoami)
 **Error**: `Failed to establish SSH connection: Connection timeout after 30 seconds`
 
 **Solution**:
+
 1. Verify infrastructure is running: `vagrantp status`
 2. Check network connectivity to the IP address
 3. Verify SSH service is running in the infrastructure
@@ -439,6 +449,7 @@ sudo usermod -a -G libvirt $(whoami)
 **Error**: `Ansible playbook failed: task 'Install Nginx' returned non-zero exit code 1`
 
 **Solution**:
+
 1. Check playbook syntax: `ansible-playbook --syntax-check playbooks/site.yml`
 2. Review playbook for errors
 3. Test playbook manually: `ansible-playbook playbooks/site.yml -i inventory.ini`
@@ -505,8 +516,8 @@ vagrantp ssh --command "cat /etc/os-release"
 
 - **View command help**: `vagrantp --help` or `vagrantp <command> --help`
 - **Check version**: `vagrantp --version`
-- **Report issues**: https://github.com/yourusername/vagrantp/issues
-- **Documentation**: https://github.com/yourusername/vagrantp/wiki
+- **Report issues**: <https://github.com/yourusername/vagrantp/issues>
+- **Documentation**: <https://github.com/yourusername/vagrantp/wiki>
 
 ---
 

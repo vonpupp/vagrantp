@@ -1,0 +1,18 @@
+---
+# Variables for user-management.yml playbook
+# Usage: PROVISIONING_VARS=./examples/user-management-vars.yml
+
+users:
+  - name: developer
+    shell: /bin/bash
+    groups:
+      - docker
+      - sudo
+    sudo: true
+    ssh_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."
+
+  - name: deploy
+    shell: /bin/bash
+    groups: []
+    sudo: false
+    ssh_key: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."

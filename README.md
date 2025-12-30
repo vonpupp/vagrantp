@@ -49,7 +49,7 @@ uv run pre-commit install --hook-dir githooks
 # Run tests
 uv run pytest --cov=src tests/
 
-# Run linting
+# Run individual checks
 uv run ruff check .
 ... individual tests ...
 
@@ -211,9 +211,10 @@ Show version information.
 | `BOX` | Vagrant box image - VM only | `generic/alpine319` | `ubuntu/focal64` |
 | `NETWORK_MODE` | Network type (`bridge` or `default`) | `default` | `bridge` |
 | `IP_ADDRESS` | Fixed IP address | Auto-assign | `192.168.1.100` |
-| `PORTS` | Port forwarding rules (`host:container`) | `[]` | `8080:80,auto:443` |
-| `IMAGE` | Container image - containers only | `alpine:latest` | `nginx:latest` |
-| `PROVISIONING_PLAYBOOK` | Ansible playbook path | N/A | `./playbooks/site.yml` |
+ | `PORTS` | Port forwarding rules (`host:container`) | `[]` | `8080:80,auto:443` |
+ | `IMAGE` | Container image - containers only | `alpine:latest` | `nginx:latest` |
+ | `PROVISIONING_PLAYBOOK` | Ansible playbook path | N/A | `./playbooks/site.yml` |
+ | `PROVISIONING_VARS` | Ansible variables file (optional) | N/A | `./playbooks/vars.yml` |
 
 ## Resource Units
 
@@ -239,3 +240,34 @@ PORTS=8080:80,8081:443,auto:8082
 
 - **default**: Use default NAT/networking
 - **bridge**: Use bridged networking for direct network access
+
+## Provisioning
+
+Vagrantp can automatically run Ansible playbooks after infrastructure creation. To enable:
+
+1. Add `PROVISIONING_PLAYBOOK=path/to/playbook.yml` to your `.env` file
+2. Optionally add `PROVISIONING_VARS=path/to/vars.yml` for variables
+3. Run `vagrantp up` - provisioning runs automatically after infrastructure boots
+
+### Idempotency
+
+- First `up`: Runs playbook, creates `.provisioned` marker
+- Subsequent `up` commands skip provisioning (marker exists)
+- To re-provision: Remove `.provisioned` file, then run `vagrantp up`
+
+### Skipping Provisioning
+
+```bash
+vagrantp up --no-provision
+```
+
+### Default Playbook
+
+Vagrantp includes a default playbook at `ansible/site.yml` that installs base packages (git, vim, tmux). Use it as a template or create your own playbooks.
+
+See `examples/` directory for playbook examples including:
+
+- `simple-service.yml` - Install and configure Nginx
+- `user-management.yml` - Create users and setup SSH
+- `development-env.yml` - Install development tools
+- `multi-distro.yml` - Multi-distro support example

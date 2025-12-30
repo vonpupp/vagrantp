@@ -1,8 +1,12 @@
 """Integration tests for VM lifecycle."""
 
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from config.parser import ConfigurationParser
+from provision.ansible import AnsibleProvisioner
 from utils.helpers import InfrastructureState
 from vagrant.vm_manager import VMManager
 
@@ -119,3 +123,111 @@ def test_full_lifecycle_workflow(temp_project_dir, vm_manager):
     # Verify state transition back to not_created
     # state = vm_manager._get_state()
     # assert state == InfrastructureState.NOT_CREATED
+
+
+def test_vm_provisioning_workflow(temp_project_dir, vm_manager):
+    """Test VM provisioning workflow with mocked Ansible."""
+    # Create provisioning playbook
+    playbook = temp_project_dir / "playbook.yml"
+    playbook.write_text("""---
+- name: Test playbook
+  hosts: all
+  tasks:
+    - name: Create test file
+      copy:
+        content: "test"
+        dest: /tmp/test.txt
+""")
+
+    provisioner = AnsibleProvisioner(temp_project_dir)
+
+    # Mock ansible-playbook execution
+    with patch("subprocess.run") as mock_run:
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+        mock_run.return_value = mock_result
+
+        # Execute provisioning
+        provisioner.execute(
+            playbook_path=playbook,
+            inventory_path="192.168.1.100",
+            dry_run=False,
+        )
+
+        # Verify ansible-playbook was called
+        assert mock_run.called
+        call_args = mock_run.call_args
+        assert "ansible-playbook" in call_args[0][0]
+        assert str(playbook) in call_args[0][0]
+
+        # Verify provisioning marker was created
+        assert provisioner.is_provisioned()
+
+
+def test_vm_provisioning_idempotency(temp_project_dir, vm_manager):
+    """Test that provisioning is skipped if already done."""
+    provisioner = AnsibleProvisioner(temp_project_dir)
+
+    # Create provisioning marker
+    provisioner._mark_provisioned()
+
+    # Verify provisioning is marked as done
+    assert provisioner.is_provisioned()
+
+
+def test_vm_provisioning_error_handling(temp_project_dir, vm_manager):
+    """Test error handling for failed provisioning."""
+    playbook = temp_project_dir / "playbook.yml"
+    playbook.write_text("---\n- name: Invalid\n  hosts: all\n")
+
+    provisioner = AnsibleProvisioner(temp_project_dir)
+
+    # Mock ansible-playbook to fail
+    with patch("subprocess.run") as mock_run:
+        from utils.helpers import ProvisioningFailedError
+
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "PLAY RECAP [ERROR]"
+        mock_run.return_value = mock_result
+
+        # Verify ProvisioningFailedError is raised
+        with pytest.raises(ProvisioningFailedError):
+            provisioner.execute(
+                playbook_path=playbook,
+                inventory_path="192.168.1.100",
+                dry_run=False,
+            )
+
+
+def test_vm_provisioning_dry_run(temp_project_dir, vm_manager):
+    """Test provisioning in dry-run mode."""
+    playbook = temp_project_dir / "playbook.yml"
+    playbook.write_text("---\n- name: Test\n  hosts: all\n")
+
+    provisioner = AnsibleProvisioner(temp_project_dir)
+
+    # Mock ansible-playbook execution
+    with patch("subprocess.run") as mock_run:
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = ""
+        mock_result.stderr = ""
+        mock_run.return_value = mock_result
+
+        # Execute provisioning with dry-run
+        provisioner.execute(
+            playbook_path=playbook,
+            inventory_path="192.168.1.100",
+            dry_run=True,
+        )
+
+        # Verify --check flag was passed
+        call_args = mock_run.call_args
+        assert "--check" in call_args[0][0]
+
+        # Verify provisioning marker was NOT created (dry-run)
+        assert not provisioner.is_provisioned()

@@ -67,6 +67,38 @@ class ContainerManager:
 
         return InfrastructureState.NOT_CREATED
 
+    def _get_ssh_host(self) -> str:
+        """Get SSH host (IP address) of container.
+
+        Returns:
+            SSH host IP address.
+
+        Raises:
+            VagrantpError: If container is not running or IP cannot be determined.
+        """
+        state = self._get_state()
+        if state != InfrastructureState.RUNNING:
+            raise VagrantpError(
+                f"Container '{self.infra_id}' is not running (state: {state.value})",
+                ErrorCode.GENERAL_ERROR,
+            )
+
+        try:
+            result = run_command(
+                ["podman", "inspect", self.infra_id, "--format", "{{.NetworkSettings.IPAddress}}"],
+                cwd=self.project_dir,
+                check=True,
+            )
+
+            ip_address = result.stdout.strip() if result.stdout else ""
+            if not ip_address:
+                raise VagrantpError("Could not determine container IP address")
+
+            return ip_address
+
+        except subprocess.CalledProcessError as e:
+            raise VagrantpError(f"Failed to get container IP: {e}")
+
     def create(self, config: dict[str, Any]) -> None:
         """Create container from configuration.
 

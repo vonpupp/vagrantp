@@ -341,6 +341,18 @@ class ConfigurationParser:
             except ValidationError as e:
                 errors.append(e.message)
 
+        # Validate PROVISIONING_PLAYBOOK
+        if "PROVISIONING_PLAYBOOK" in self.config:
+            playbook_path = Path(self.config["PROVISIONING_PLAYBOOK"])
+            if not playbook_path.exists():
+                errors.append(f"PROVISIONING_PLAYBOOK not found: {playbook_path}")
+
+        # Validate PROVISIONING_VARS
+        if "PROVISIONING_VARS" in self.config:
+            vars_path = Path(self.config["PROVISIONING_VARS"])
+            if not vars_path.exists():
+                errors.append(f"PROVISIONING_VARS not found: {vars_path}")
+
         return ValidationResult(len(errors) == 0, errors, warnings)
 
 

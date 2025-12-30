@@ -1,0 +1,70 @@
+---
+# Development environment example: Install dev tools
+# Usage: cp examples/development-env.yml playbooks/site.yml
+
+- name: Setup development environment
+  hosts: all
+  become: yes
+  gather_facts: true
+
+  tasks:
+    - name: Update package cache (Debian/Ubuntu)
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Update package cache (Arch Linux)
+      pacman:
+        update_cache: true
+      when: ansible_os_family == "Archlinux"
+
+    - name: Install build tools
+      package:
+        name:
+          - build-essential
+          - git
+          - vim
+          - tmux
+          - curl
+          - wget
+        state: present
+
+    - name: Install Python and pip
+      package:
+        name:
+          - python3
+          - python3-pip
+        state: present
+
+    - name: Install common Python packages
+      pip:
+        name:
+          - setuptools
+          - wheel
+        executable: pip3
+
+    - name: Install Node.js (Debian/Ubuntu)
+      apt:
+        name: nodejs
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Node.js (Arch Linux)
+      pacman:
+        name: nodejs
+        state: present
+      when: ansible_os_family == "Archlinux"
+
+    - name: Create development user
+      user:
+        name: dev
+        shell: /bin/bash
+        groups: sudo
+        append: yes
+
+    - name: Setup SSH for development user
+      authorized_key:
+        user: dev
+        key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+      ignore_errors: yes

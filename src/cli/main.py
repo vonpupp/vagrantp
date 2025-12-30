@@ -9,12 +9,14 @@ from invoke.tasks import task
 
 from config.parser import ConfigurationParser
 from podman.container_manager import ContainerManager
+from provision.ansible import AnsibleProvisioner
 from utils.helpers import (
     ConfigInvalidError,
     ConfigNotFoundError,
     ErrorCode,
     InfrastructureExistsError,
     InfrastructureState,
+    ProvisioningFailedError,
     VagrantpError,
 )
 from vagrant.vm_manager import VMManager
@@ -41,19 +43,27 @@ def up(c, dry_run=False, no_provision=False):
             sys.exit(ErrorCode.CONFIG_ERROR.value)
 
         infra_type = config.get("INFRA_TYPE", "vm")
+        infra_id = config.get("INFRA_ID", Path.cwd().name)
 
         if dry_run:
             print("✓ Configuration validated")
             print(f"  INFRA_TYPE: {infra_type}")
             print(f"  PROVIDER: {config.get('PROVIDER')}")
+            print(f"  ID: {infra_id}")
             return
 
-        infra_id = config.get("INFRA_ID", Path.cwd().name)
+        vm_manager = None
+        container_manager = None
+        manager = None
 
         if infra_type == "vm":
-            manager = VMManager(infra_id)
+            vm_manager = VMManager(infra_id)
+            manager = vm_manager
+            container_manager = None
         elif infra_type == "container":
-            manager = ContainerManager(infra_id)
+            container_manager = ContainerManager(infra_id)
+            manager = container_manager
+            vm_manager = None
         else:
             print(f"✗ Unknown INFRA_TYPE: {infra_type}")
             sys.exit(ErrorCode.CONFIG_ERROR.value)
@@ -69,9 +79,40 @@ def up(c, dry_run=False, no_provision=False):
                 print(f"  INFRA_TYPE: {infra_type}")
                 print(f"  ID: {infra_id}")
                 manager.start()
+
                 if not no_provision and config.get("PROVISIONING_PLAYBOOK"):
-                    print("ℹ Provisioning not yet implemented")
-                    print("  This will be implemented in Phase 6")
+                    provisioner = AnsibleProvisioner(infra_type=infra_type, infra_id=infra_id)
+                    if provisioner.is_provisioned():
+                        print("ℹ Provisioning already completed (skipping)")
+                        print("  To re-provision, remove .provisioned marker file")
+                        return
+
+                    playbook_path = Path(config["PROVISIONING_PLAYBOOK"])
+                    vars_path = (
+                        Path(config["PROVISIONING_VARS"])
+                        if config.get("PROVISIONING_VARS")
+                        else None
+                    )
+
+                    inventory_path = infra_type
+                    if infra_type == "vm" and vm_manager is not None:
+                        inventory_path = vm_manager._get_ssh_host()
+                    elif infra_type == "container" and container_manager is not None:
+                        inventory_path = container_manager._get_ssh_host()
+
+                    try:
+                        provisioner.execute(
+                            playbook_path=playbook_path,
+                            inventory_path=inventory_path,
+                            vars_path=vars_path,
+                            dry_run=dry_run,
+                        )
+                    except ProvisioningFailedError as e:
+                        print(f"✗ {e.message}")
+                        if e.suggestion:
+                            print(f"  → {e.suggestion}")
+                        sys.exit(ErrorCode.PROVISIONING_FAILED.value)
+
                 return
             else:
                 print(f"ℹ Infrastructure '{infra_id}' exists in state: {current_state.value}")
@@ -86,16 +127,41 @@ def up(c, dry_run=False, no_provision=False):
             print(f"  IMAGE: {config.get('IMAGE', 'alpine:latest')}")
         print(f"  ID: {infra_id}")
 
-        if infra_type == "vm":
-            vm_manager = VMManager(infra_id)
+        if infra_type == "vm" and vm_manager is not None:
             vm_manager.create(config)
-        elif infra_type == "container":
-            container_manager = ContainerManager(infra_id)
+        elif infra_type == "container" and container_manager is not None:
             container_manager.create(config)
 
         if not no_provision and config.get("PROVISIONING_PLAYBOOK"):
-            print("ℹ Provisioning not yet implemented")
-            print("  This will be implemented in Phase 6")
+            provisioner = AnsibleProvisioner(infra_type=infra_type, infra_id=infra_id)
+            if provisioner.is_provisioned():
+                print("ℹ Provisioning already completed (skipping)")
+                print("  To re-provision, remove .provisioned marker file")
+                return
+
+            playbook_path = Path(config["PROVISIONING_PLAYBOOK"])
+            vars_path = (
+                Path(config["PROVISIONING_VARS"]) if config.get("PROVISIONING_VARS") else None
+            )
+
+            inventory_path = infra_type
+            if infra_type == "vm" and vm_manager is not None:
+                inventory_path = vm_manager._get_ssh_host()
+            elif infra_type == "container" and container_manager is not None:
+                inventory_path = container_manager._get_ssh_host()
+
+            try:
+                provisioner.execute(
+                    playbook_path=playbook_path,
+                    inventory_path=inventory_path,
+                    vars_path=vars_path,
+                    dry_run=dry_run,
+                )
+            except ProvisioningFailedError as e:
+                print(f"✗ {e.message}")
+                if e.suggestion:
+                    print(f"  → {e.suggestion}")
+                sys.exit(ErrorCode.PROVISIONING_FAILED.value)
 
     except ConfigNotFoundError as e:
         print(f"✗ {e.message}")

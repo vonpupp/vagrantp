@@ -28,7 +28,7 @@
 - [X] T002 Create pyproject.toml with dependencies: invoke>=2.0, python-dotenv>=1.0.0, vagrant>=2.3, pytest>=7.0, pytest-mock>=3.10
 - [X] T003 Create requirements.txt from pyproject.toml dependencies
 - [X] T004 Create setup.py for package installation
-- [X] T005 [P] Create __init__.py files in all src/ directories
+- [X] T005 [P] Create **init**.py files in all src/ directories
 - [X] T006 [P] Create README.md with project overview and installation instructions
 - [X] T007 [P] Create .gitignore for Python, Vagrant, and Podman artifacts
 
@@ -152,20 +152,20 @@
 
 ### Implementation for User Story 4
 
-- [ ] T070 [P] [US4] Create provisioning orchestrator in src/provision/ansible.py with execute() method that runs Ansible playbooks
-- [ ] T071 [P] [US4] Extend configuration parser in src/config/parser.py to parse PROVISIONING_PLAYBOOK path and validate file exists
-- [ ] T072 [P] [US4] Extend configuration parser in src/config/parser.py to parse optional PROVISIONING_VARS path for Ansible variables
-- [ ] T073 [US4] Implement Ansible playbook execution in src/provision/ansible.py execute() with output capture and exit code handling
-- [ ] T074 [US4] Implement SSH connection verification in src/provision/ansible.py before running Ansible playbook
-- [ ] T075 [US4] Add dry-run mode support in src/provision/ansible.py execute() for Ansible playbook validation
-- [ ] T076 [US4] Integrate provisioning into up CLI command in src/cli/main.py with --no-provision option to skip provisioning
-- [ ] T077 [US4] Add provisioning progress indicators in up CLI command showing playbook execution progress
-- [ ] T078 [US4] Add error handling for provisioning failures with clear error messages showing failure point (exit code 7)
-- [ ] T079 [US4] Add idempotency support for provisioning by checking if provisioning already succeeded
-- [ ] T080 [US4] Create default Ansible playbook in ansible/site.yml that installs base packages (git, vim, tmux)
-- [ ] T081 [US4] Create integration test in tests/integration/test_vm_lifecycle.py for VM provisioning workflow
-- [ ] T082 [US4] Create integration test in tests/integration/test_container_lifecycle.py for container provisioning workflow
-- [ ] T083 [US4] Create unit tests in tests/unit/test_ansible.py for provisioning orchestrator with mocked Ansible CLI calls
+- [X] T070 [P] [US4] Create provisioning orchestrator in src/provision/ansible.py with execute() method that runs Ansible playbooks
+- [X] T071 [P] [US4] Extend configuration parser in src/config/parser.py to parse PROVISIONING_PLAYBOOK path and validate file exists
+- [X] T072 [P] [US4] Extend configuration parser in src/config/parser.py to parse optional PROVISIONING_VARS path for Ansible variables
+- [X] T073 [US4] Implement Ansible playbook execution in src/provision/ansible.py execute() with output capture and exit code handling
+- [X] T074 [US4] Implement SSH connection verification in src/provision/ansible.py before running Ansible playbook
+- [X] T075 [US4] Add dry-run mode support in src/provision/ansible.py execute() for Ansible playbook validation
+- [X] T076 [US4] Integrate provisioning into up CLI command in src/cli/main.py with --no-provision option to skip provisioning
+- [X] T077 [US4] Add provisioning progress indicators in up CLI command showing playbook execution progress
+- [X] T078 [US4] Add error handling for provisioning failures with clear error messages showing failure point (exit code 7)
+- [X] T079 [US4] Add idempotency support for provisioning by checking if provisioning already succeeded
+- [X] T080 [US4] Create default Ansible playbook in ansible/site.yml that installs base packages (git, vim, tmux)
+- [X] T081 [US4] Create integration test in tests/integration/test_vm_lifecycle.py for VM provisioning workflow
+- [X] T082 [US4] Create integration test in tests/integration/test_container_lifecycle.py for container provisioning workflow
+- [X] T083 [US4] Create unit tests in tests/unit/test_ansible.py for provisioning orchestrator with mocked Ansible CLI calls
 
 **Checkpoint**: User Story 4 adds automated provisioning capability
 
