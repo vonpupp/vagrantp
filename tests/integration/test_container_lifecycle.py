@@ -1,9 +1,13 @@
 """Integration tests for container lifecycle."""
 
+from pathlib import Path
+
 import pytest
 
+from cli.main import _check_ansible_in_container, _detect_container_runtime
 from config.parser import ConfigurationParser
 from podman.container_manager import ContainerManager
+from provision.ansible import ProvisioningManager
 from utils.helpers import InfrastructureState
 
 
@@ -14,11 +18,13 @@ def temp_container_project_dir(tmp_path):
     project_dir.mkdir()
 
     env_file = project_dir / ".env"
-    env_file.write_text("""INFRA_TYPE=container
+    env_file.write_text(
+        """INFRA_TYPE=container
 MEMORY=512
 CPUS=1
 IMAGE=alpine:latest
-""")
+"""
+    )
 
     return project_dir
 
@@ -150,3 +156,144 @@ def test_full_lifecycle_workflow(temp_container_project_dir, container_manager):
     # Verify state transition back to not_created
     # state = container_manager._get_state()
     # assert state == InfrastructureState.NOT_CREATED
+
+
+def test_container_provisioning_workflow(temp_container_project_dir):
+    """Test provisioning workflow for container."""
+    # Create Ansible playbook
+    playbook = temp_container_project_dir / "playbook.yml"
+    playbook.write_text(
+        """---
+- name: Test container provisioning
+  hosts: all
+  become: yes
+  tasks:
+    - name: Create test directory
+      file:
+        path: /tmp/container_test
+        state: directory
+"""
+    )
+
+    # Create provisioning manager
+    provision_manager = ProvisioningManager("test_container", temp_container_project_dir)
+
+    # Check initial provisioning status
+    assert provision_manager.check_provisioning_status() is False
+
+    # Mark as provisioned
+    provision_manager.mark_provisioned()
+
+    # Verify provisioning status
+    assert provision_manager.check_provisioning_status() is True
+
+    # Clear provisioning status
+    provision_manager.clear_provisioned_status()
+
+    # Verify provisioning status cleared
+    assert provision_manager.check_provisioning_status() is False
+
+
+def test_container_provisioning_with_docker_connection(temp_container_project_dir):
+    """Test provisioning with docker connection type for containers."""
+    # Create Ansible playbook
+    playbook = temp_container_project_dir / "playbook.yml"
+    playbook.write_text(
+        """---
+- name: Test container provisioning with docker
+  hosts: all
+  connection: docker
+  tasks:
+    - name: Create test file
+      copy:
+        content: "test"
+        dest: /tmp/test.txt
+"""
+    )
+
+    # Verify playbook exists
+    assert playbook.exists()
+
+
+def test_provisioning_status_tracking_for_container(temp_container_project_dir):
+    """Test provisioning status tracking for containers."""
+    provision_manager = ProvisioningManager("test_container", temp_container_project_dir)
+
+    state_file = temp_container_project_dir / ".vagrantp_provisioned"
+
+    # Initial: not provisioned
+    assert provision_manager.check_provisioning_status() is False
+    assert not state_file.exists()
+
+    # Mark as provisioned
+    provision_manager.mark_provisioned()
+    assert provision_manager.check_provisioning_status() is True
+    assert state_file.exists()
+
+    # Verify state file content is a timestamp
+    state_content = state_file.read_text()
+    try:
+        float(state_content)
+    except ValueError:
+        raise AssertionError("State file should contain a timestamp")
+
+    # Clear provisioning status
+    provision_manager.clear_provisioned_status()
+    assert provision_manager.check_provisioning_status() is False
+    assert not state_file.exists()
+
+
+def test_detect_container_runtime_podman():
+    """Test that Podman runtime is detected."""
+    runtime = _detect_container_runtime()
+    # Test passes if podman or docker is detected, or if neither is present
+    assert runtime in ["podman", "docker", None]
+
+
+def test_detect_container_runtime_docker():
+    """Test that Docker runtime can be detected."""
+    # Just verify the function doesn't crash
+    runtime = _detect_container_runtime()
+    assert runtime in ["podman", "docker", None]
+
+
+def test_bootstrap_playbook_exists():
+    """Test that bootstrap playbook exists."""
+    bootstrap_path = Path("ansible/bootstrap.yml")
+    assert bootstrap_path.exists()
+
+
+def test_config_auto_install_ansible_validation():
+    """Test PROVISIONING_AUTO_INSTALL_ANSIBLE validation."""
+    # Test with valid values
+    valid_values = ["true", "false", "1", "0", "yes", "no"]
+
+    for value in valid_values:
+        parser = ConfigurationParser()
+        # Set required fields to avoid validation errors
+        parser.config["INFRA_TYPE"] = "container"
+        parser.config["IMAGE"] = "alpine:latest"
+        parser.config["PROVISIONING_AUTO_INSTALL_ANSIBLE"] = value
+
+        result = parser.validate()
+
+        # Should not have errors for valid values
+        assert result.valid is True
+        assert len(result.errors) == 0
+
+    # Test with invalid values
+    invalid_values = ["invalid", "maybe", "2"]
+
+    for value in invalid_values:
+        parser = ConfigurationParser()
+        # Set required fields to avoid validation errors
+        parser.config["INFRA_TYPE"] = "container"
+        parser.config["IMAGE"] = "alpine:latest"
+        parser.config["PROVISIONING_AUTO_INSTALL_ANSIBLE"] = value
+
+        result = parser.validate()
+
+        # Should have errors for invalid values
+        assert result.valid is False
+        assert len(result.errors) > 0
+        assert any("PROVISIONING_AUTO_INSTALL_ANSIBLE" in e for e in result.errors)

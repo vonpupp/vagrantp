@@ -341,6 +341,30 @@ class ConfigurationParser:
             except ValidationError as e:
                 errors.append(e.message)
 
+        # Validate PROVISIONING_PLAYBOOK
+        if "PROVISIONING_PLAYBOOK" in self.config:
+            playbook_path = Path(self.config["PROVISIONING_PLAYBOOK"])
+            if not playbook_path.exists():
+                errors.append(
+                    f"PROVISIONING_PLAYBOOK not found: {self.config['PROVISIONING_PLAYBOOK']}"
+                )
+            if playbook_path.suffix not in [".yml", ".yaml"]:
+                errors.append("PROVISIONING_PLAYBOOK must be a .yml or .yaml file")
+
+        # Validate PROVISIONING_VARS
+        if "PROVISIONING_VARS" in self.config:
+            vars_path = Path(self.config["PROVISIONING_VARS"])
+            if not vars_path.exists():
+                errors.append(f"PROVISIONING_VARS not found: {self.config['PROVISIONING_VARS']}")
+
+        # Validate PROVISIONING_AUTO_INSTALL_ANSIBLE
+        if "PROVISIONING_AUTO_INSTALL_ANSIBLE" in self.config:
+            value = self.config["PROVISIONING_AUTO_INSTALL_ANSIBLE"].lower()
+            if value not in ["true", "false", "1", "0", "yes", "no"]:
+                errors.append(
+                    "PROVISIONING_AUTO_INSTALL_ANSIBLE must be true/false, 1/0, or yes/no"
+                )
+
         return ValidationResult(len(errors) == 0, errors, warnings)
 
 

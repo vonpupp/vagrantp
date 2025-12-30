@@ -1,5 +1,6 @@
 # tokens
 .env
+.vagrantp_provisioned
 
 # Python
 __pycache__/

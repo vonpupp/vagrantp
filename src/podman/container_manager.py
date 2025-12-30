@@ -123,6 +123,19 @@ class ContainerManager:
 
         try:
             run_command(["podman", "start", self.infra_id], cwd=self.project_dir)
+
+            # Wait for container to be running
+            max_wait = 10
+            wait_time = 0.0
+            while wait_time < max_wait:
+                state = self._get_state()
+                if state == InfrastructureState.RUNNING:
+                    break
+                import time
+
+                time.sleep(0.5)
+                wait_time += 0.5
+
             print("✓ Container started")
         except subprocess.CalledProcessError as e:
             raise VagrantpError(f"Failed to start container: {e}")
@@ -191,6 +204,18 @@ class ContainerManager:
                 run_command(["podman", "kill", self.infra_id], cwd=self.project_dir)
             else:
                 run_command(["podman", "stop", self.infra_id], cwd=self.project_dir)
+
+            # Wait for container to be stopped
+            max_wait = 10
+            wait_time = 0.0
+            while wait_time < max_wait:
+                state = self._get_state()
+                if state != InfrastructureState.RUNNING:
+                    break
+                import time
+
+                time.sleep(0.5)
+                wait_time += 0.5
 
             print("✓ Container stopped")
         except subprocess.CalledProcessError as e:

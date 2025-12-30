@@ -3,7 +3,8 @@
 # This playbook installs base packages and configures system
 
 - name: Configure infrastructure
-  hosts: all
+  hosts: localhost
+  connection: local
   become: true
   gather_facts: true
 
