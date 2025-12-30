@@ -263,7 +263,9 @@ vagrantp up --no-provision
 
 ### Default Playbook
 
-Vagrantp includes a default playbook at `ansible/site.yml` that installs base packages (git, vim, tmux). Use it as a template or create your own playbooks.
+Vagrantp includes a default playbook at `ansible/site.yml` that installs
+base packages (git, vim, tmux). Use it as a template or create
+your own playbooks.
 
 See `examples/` directory for playbook examples including:
 

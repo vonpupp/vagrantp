@@ -38,4 +38,6 @@ PROVISIONING_PLAYBOOK=./playbooks/site.yml
 
 ## Default Playbook
 
-Vagrantp includes a default playbook at `ansible/site.yml` in the project root that installs base packages (git, vim, tmux, curl, wget). You can use it directly or copy it as a template for custom playbooks.
+Vagrantp includes a default playbook at `ansible/site.yml` in the project root that installs
+base packages (git, vim, tmux, curl, wget). You can use it directly or copy
+it as a template for custom playbooks.
