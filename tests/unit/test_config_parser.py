@@ -94,26 +94,21 @@ class TestConfigurationParser:
         value = parser.get_bool("ENABLED")
         assert value is False
 
-    def test_parse_memory_bytes(self, parser):
-        """Test parsing memory value in bytes."""
-        parser.load()
-
-        memory_mb = parser._parse_memory("1024")
-        assert memory_mb == 1024
-
-    def test_parse_memory_gb(self, parser):
-        """Test parsing memory value in GB."""
-        parser.load()
-
-        memory_mb = parser._parse_memory("2G")
-        assert memory_mb == 2048
-
     def test_parse_memory_mb(self, parser):
         """Test parsing memory value in MB."""
         parser.load()
 
-        memory_mb = parser._parse_memory("1024M")
-        assert memory_mb == 1024
+        memory_mb = parser._parse_memory("8192")
+        assert memory_mb == 8192
+
+    def test_parse_memory_with_suffix_invalid(self, parser):
+        """Test that memory with unit suffix is invalid."""
+        parser.load()
+
+        with pytest.raises(ValidationError) as exc_info:
+            parser._parse_memory("8G")
+
+        assert exc_info.value.field == "MEMORY"
 
     def test_parse_memory_invalid(self, parser):
         """Test parsing invalid memory value."""

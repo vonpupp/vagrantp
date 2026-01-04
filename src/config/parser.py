@@ -120,10 +120,10 @@ class ConfigurationParser:
         return default
 
     def _parse_memory(self, memory_str: str) -> int:
-        """Parse memory string with unit suffix (e.g., '2G', '512M').
+        """Parse memory value (MB only, no unit suffix).
 
         Args:
-            memory_str: Memory string with optional unit.
+            memory_str: Memory string in MB (numeric only).
 
         Returns:
             Memory in MB.
@@ -131,22 +131,14 @@ class ConfigurationParser:
         Raises:
             ValidationError: If format is invalid.
         """
-        memory_str = memory_str.strip().upper()
+        memory_str = memory_str.strip()
 
-        if memory_str.isdigit():
-            return int(memory_str)
+        if not memory_str.isdigit():
+            raise ValidationError(
+                f"Invalid MEMORY format: {memory_str} (must be numeric, in MB)", "MEMORY"
+            )
 
-        match = re.match(r"^(\d+)(G|M|GB|MB)?$", memory_str)
-        if not match:
-            raise ValidationError(f"Invalid MEMORY format: {memory_str}", "MEMORY")
-
-        value, unit = match.groups()
-        value = int(value)
-
-        if unit in ("G", "GB"):
-            return value * 1024
-        else:  # M or MB
-            return value
+        return int(memory_str)
 
     def _parse_disk_size(self, disk_str: str) -> int:
         """Parse disk size string with unit suffix (e.g., '20G', '50000M').

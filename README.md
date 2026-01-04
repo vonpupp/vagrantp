@@ -204,7 +204,7 @@ Show version information.
 | Field | Description | Default | Example |
 |--------|-------------|---------|---------|
 | `INFRA_ID` | Custom infrastructure ID | Project directory name | `myapp-dev` |
-| `MEMORY` | RAM allocation (MB or GB) | `2048` (2GB) | `8192` |
+| `MEMORY` | RAM allocation in MB (numeric) | `2048` | `8192` |
 | `CPUS` | CPU cores | `2` | `4` |
 | `DISK_SIZE` | Disk size (GB) - VM only | `20G` | `50G` |
 | `PROVIDER` | VM provider (required for VM) | `virtualbox` | `libvirt` |
@@ -221,7 +221,7 @@ Show version information.
 
 ## Resource Units
 
-- **Memory**: Can be specified in MB (e.g., `2048`) or GB (e.g., `2G`, `2GB`)
+- **Memory**: Must be specified in MB as numeric value (e.g., `2048`, `8192`)
 - **CPU**: Integer number of cores (e.g., `1`, `2`, `4`)
 - **Disk**: Can be specified in GB (e.g., `20G`, `20GB`) or MB (e.g., `20000M`, `20000MB`)
 

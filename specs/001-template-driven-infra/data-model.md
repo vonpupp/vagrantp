@@ -108,7 +108,7 @@ not_created ──(up)──> creating ──(boot_complete)──> running
 |-------|------|----------|-------------|---------|------------|
 | `INFRA_TYPE` | enum | Yes | Infrastructure type | N/A | Must be `vm` or `container` |
 | `INFRA_ID` | string | No | Custom infrastructure identifier | Project directory name | Must be valid hostname |
-| `MEMORY` | string | No | RAM allocation | `2048` | Must be integer ≥ 512, format: `<bytes>` or `<unit>` (e.g., `2G`) |
+| `MEMORY` | integer | No | RAM allocation in MB | `2048` | Must be integer ≥ 512 (MB only, numeric) |
 | `CPUS` | integer | No | CPU cores | `2` | Must be integer ≥ 1 |
 | `DISK_SIZE` | string | No | Disk size | `20G` | Must be valid size format (e.g., `20G`, `50000M`) |
 | `PROVIDER` | string | No | VM provider (if VM) | `virtualbox` | Must be installed on host |
@@ -161,41 +161,45 @@ SSH_KEY=/home/av/.ssh/id_rsa
 ```python
 def validate_config(config: dict) -> ValidationResult:
     # Check required fields
-    if 'INFRA_TYPE' not in config:
+    if "INFRA_TYPE" not in config:
         raise ValidationError("INFRA_TYPE is required")
 
     # Validate INFRA_TYPE
-    if config['INFRA_TYPE'] not in ['vm', 'container']:
+    if config["INFRA_TYPE"] not in ["vm", "container"]:
         raise ValidationError("INFRA_TYPE must be 'vm' or 'container'")
 
     # Validate provider for VM
-    if config['INFRA_TYPE'] == 'vm' and 'PROVIDER' not in config:
+    if config["INFRA_TYPE"] == "vm" and "PROVIDER" not in config:
         raise ValidationError("PROVIDER is required for VM infrastructure")
 
     # Validate resource constraints
-    memory = parse_memory(config.get('MEMORY', '2048'))
+    memory = parse_memory(config.get("MEMORY", "2048"))
     if memory < 512:
         raise ValidationError("MEMORY must be at least 512MB")
 
-    cpus = int(config.get('CPUS', '2'))
+    cpus = int(config.get("CPUS", "2"))
     if cpus < 1:
         raise ValidationError("CPUS must be at least 1")
 
     # Validate networking
-    if 'IP_ADDRESS' in config:
-        if not is_valid_ipv4(config['IP_ADDRESS']):
+    if "IP_ADDRESS" in config:
+        if not is_valid_ipv4(config["IP_ADDRESS"]):
             raise ValidationError("Invalid IP_ADDRESS format")
 
     # Validate port conflicts
-    if 'PORTS' in config:
-        for port_mapping in parse_ports(config['PORTS']):
+    if "PORTS" in config:
+        for port_mapping in parse_ports(config["PORTS"]):
             if port_conflicts(port_mapping):
-                raise ValidationError(f"Port {port_mapping.host_port} is already in use")
+                raise ValidationError(
+                    f"Port {port_mapping.host_port} is already in use"
+                )
 
     # Validate provisioning
-    if 'PROVISIONING_PLAYBOOK' in config:
-        if not os.path.exists(config['PROVISIONING_PLAYBOOK']):
-            raise ValidationError(f"PROVISIONING_PLAYBOOK does not exist: {config['PROVISIONING_PLAYBOOK']}")
+    if "PROVISIONING_PLAYBOOK" in config:
+        if not os.path.exists(config["PROVISIONING_PLAYBOOK"]):
+            raise ValidationError(
+                f"PROVISIONING_PLAYBOOK does not exist: {config['PROVISIONING_PLAYBOOK']}"
+            )
 
     return ValidationResult(valid=True)
 ```
@@ -343,10 +347,10 @@ PROVISIONING_VARS=./playbooks/vars.yml
 
 ```python
 {
-    "host_port": int,          # Port on host (0 for auto)
-    "container_port": int,     # Port in infrastructure
-    "protocol": str,           # "tcp" or "udp"
-    "auto": bool               # True if host_port should be auto-assigned
+    "host_port": int,  # Port on host (0 for auto)
+    "container_port": int,  # Port in infrastructure
+    "protocol": str,  # "tcp" or "udp"
+    "auto": bool,  # True if host_port should be auto-assigned
 }
 ```
 
